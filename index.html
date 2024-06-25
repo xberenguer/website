@@ -17,11 +17,26 @@
         <a href="https://ocean.xyz/stats/bc1qyme70rttffljqdzv60al02rdycza69wqeaqc9m">ocean</a><br>
         <br>
     </div>
-<video autoplay loop muted id="player">
-    <source src="videos/loop.mp4" type="video/mp4">
-</video>
+    <video autoplay loop muted id="player">
+        <source id="videoSource" type="video/mp4">
+    </video>
     <script>
+        // Array of video filenames
+        var videos = ["videos/loop1.mp4", "videos/loop2.mp4", "videos/loop3.mp4"];
+        
+        // Select a random video
+        var randomIndex = Math.floor(Math.random() * videos.length);
+        var randomVideo = videos[randomIndex];
+        
+        // Get video element and source element
         var video = document.getElementById('player');
+        var source = document.getElementById('videoSource');
+        
+        // Set the video source to the randomly selected video
+        source.src = randomVideo;
+        video.load();
+
+        // Set the volume
         video.volume = 0.30;
     </script>
 </body>
