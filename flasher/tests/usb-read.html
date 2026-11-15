@@ -1,0 +1,16 @@
+<!doctype html><meta charset="utf-8"><title>Read-only USB test</title>
+<style>body{background:#111715;color:#e5eee9;font:18px system-ui;max-width:760px;margin:60px auto}button{font:inherit;padding:12px;margin:8px}pre{white-space:pre-wrap}</style>
+<h1>Read-only USB test</h1><p>Developer check for the Waveshare 1.75C. This resets the device and uploads the flash stub to RAM. It never writes flash. Save any seed before testing.</p>
+<button id="connect" disabled>Connect Waveshare</button><button id="read" disabled>Check table and firmware, three passes</button><button id="close" disabled>Restart &amp; disconnect</button><pre id="status">Checking signed catalog…</pre>
+<script type="module">
+import {DeviceConnection} from '../serial.js';
+import {verifySignedCatalog} from '../signing.js';
+import {readVerified,parsePartitions,samePartitions,sha256,fetchFiles} from '../core.js';
+const $=id=>document.getElementById(id);let connection,device,release,expected;
+function status(s){$('status').textContent=s;}
+async function close(){try{await connection?.close(true);}finally{connection=null;$('connect').disabled=false;$('read').disabled=true;$('close').disabled=true;}}
+$('connect').onclick=async()=>{const chosen=navigator.serial.requestPort();$('connect').disabled=true;try{connection=new DeviceConnection();const id=await connection.connect(await chosen,device);status('Connected: '+id.chip+' / '+id.capacity/1048576+'MB');$('read').disabled=false;$('close').disabled=false;}catch(e){status('Connect stopped: '+e.message);await close();}};
+$('close').onclick=async()=>{await close();status('USB released.');};
+$('read').onclick=async()=>{$('read').disabled=true;$('close').disabled=true;try{for(let i=0;i<3;i++){status('Checking partition table, pass '+(i+1));const table=await readVerified(connection.loader,0x8000,4096);if(!samePartitions(parsePartitions(table,device.flashBytes),release.partitions))throw Error('Factory table mismatch');status('Checking first 64KiB of firmware, pass '+(i+1));const bytes=await readVerified(connection.loader,0x200000,65536);if(await sha256(bytes)!==await sha256(expected.slice(0,65536)))throw Error('Firmware bytes mismatch');}status('PASS: three exact table reads and three 64KiB firmware reads. '+JSON.stringify(connection.transport.diagnostics()));$('close').disabled=false;}catch(e){status('Read stopped: '+e.message+'\n'+JSON.stringify(connection?.transport.diagnostics()));await close();}};
+try{const [a,b]=await Promise.all([fetch('../catalog.json',{cache:'no-store'}),fetch('../catalog.sig',{cache:'no-store'})]);const c=await verifySignedCatalog(new Uint8Array(await a.arrayBuffer()),new Uint8Array(await b.arrayBuffer()));device=c.devices.find(d=>d.id==='waveshare175c');release=c.releases.find(r=>r.device===device.id);const files=await fetchFiles(release,(url,options)=>fetch('../'+url,options));expected=files.get(release.files[0].id);status('Signed reference ready: '+release.version);$('connect').disabled=false;}catch(e){status('Reference failed: '+e.message);}
+</script>
