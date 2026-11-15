@@ -53,7 +53,16 @@ test('protected regions, image chip and overlapping payloads are rejected',()=>{
   const f=new Map(files);const bytes=files.values().next().value.slice();bytes[12]=0;f.set(release.files[0].id,bytes);assert.throws(()=>validateParts(release,device,f));
 });
 test('every shipped firmware has exact SHA-256, size, map and permitted offsets',async()=>{
-  for(const r of catalog.releases){const map=new Map();for(const f of r.files){const bytes=new Uint8Array(await readFile(new URL('../'+f.url,import.meta.url)));assert.equal(bytes.length,f.bytes);assert.equal(await sha256(bytes),f.sha256);map.set(f.id,bytes);}const d=catalog.devices.find(d=>d.id===r.device);const parts=validateParts(r,d,map);const t=parts.find(p=>p.kind==='partitions');if(t)assert.ok(samePartitions(parsePartitions(t.data,d.flashBytes),r.partitions));}
+  for(const r of [...catalog.releases,...(catalog.recoveryReleases||[])]){const map=new Map();for(const f of r.files){const bytes=new Uint8Array(await readFile(new URL('../'+f.url,import.meta.url)));assert.equal(bytes.length,f.bytes);assert.equal(await sha256(bytes),f.sha256);map.set(f.id,bytes);}const d=catalog.devices.find(d=>d.id===r.device);const parts=validateParts(r,d,map);const t=parts.find(p=>p.kind==='partitions');if(t)assert.ok(samePartitions(parsePartitions(t.data,d.flashBytes),r.partitions));}
+});
+test('saved recovery files survive moving an older release out of the current catalog',async()=>{
+  const old=catalog.recoveryReleases[0],d=catalog.devices.find(d=>d.id===old.device);
+  assert.ok(old&&!catalog.releases.some(r=>r.id===old.id));
+  const before=new Uint8Array(roundUp(old.parts[0].length)).fill(71);
+  const plan={device:d.id,release:old.id,identity:{...identity,capacity:d.flashBytes},tableSha256:'0'.repeat(64),ranges:[{address:old.parts[0].address,before}]};
+  const backup=await encodeBackup(plan);
+  assert.deepEqual((await decodeBackup(backup,catalog)).ranges[0].before,before);
+  await assert.rejects(decodeBackup(backup,{...catalog,recoveryReleases:[]}),/Unsupported recovery file/);
 });
 test('download failure, wrong hash and wrong length leave writes unavailable',async()=>{
   await assert.rejects(fetchFiles(release,async()=>({ok:false})),/download/);
