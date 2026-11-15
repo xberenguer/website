@@ -109,12 +109,14 @@ export async function readVerified(loader, address, length, progress = () => {})
 export async function prepare(loader, release, device, identity, files, progress = () => {}) {
   validateIdentity(identity, device);
   const parts = validateParts(release, device, files);
+  progress('Reading partition table',0);
   const table = await readVerified(loader, 0x8000, sector);
   const rows = parsePartitions(table, device.flashBytes);
   const matchingMap = samePartitions(rows, release.partitions);
   if (device.id === 'waveshare175c') requireThat(matchingMap, 'Factory partition map differs. This installer preserves the Waveshare factory layout; use the manual recovery guide.');
   const changed = [];
   for (const part of parts) {
+    progress('Comparing '+part.kind,0);
     if ((await loader.flashMd5sum(part.address, part.data.length)).toLowerCase() !== md5Hex(part.data)) changed.push(part);
   }
   const ranges = [];

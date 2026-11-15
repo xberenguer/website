@@ -24,7 +24,8 @@
       "model": "K150 \u00b7 ESP32-S3 \u00b7 8MB flash",
       "flashBytes": 8388608,
       "recovery": "Connect USB. Hold the separate power key until the green LED blinks, then release.",
-      "image": "images/sticks3.jpg"
+      "image": "images/devices.png",
+      "viewBox": "50 145 900 630"
     },
     {
       "id": "waveshare175c",
@@ -32,54 +33,55 @@
       "model": "C model \u00b7 ESP32-S3 \u00b7 32MB flash",
       "flashBytes": 33554432,
       "recovery": "Hold BOOT while powering or resetting, then release BOOT. Keep the factory partition map.",
-      "image": "images/waveshare.png"
+      "image": "images/devices.png",
+      "viewBox": "940 65 780 730"
     }
   ],
   "releases": [
     {
-      "id": "seeder-sticks3-38de080",
+      "id": "seeder-sticks3-2.2.0-sticks3.1",
       "project": "seeder",
       "device": "sticks3",
-      "version": "2.2.0-sticks3-dev \u00b7 38de080",
+      "version": "2.2.0-sticks3.1",
       "status": "Tested build",
-      "description": "Blue rectangular interface, address QR and CompactSeedQR.",
-      "qualification": "Exact clean image flashed and ROM-verified; physical input, camera and battery qualification is partial.",
-      "source": "https://github.com/xberenguer/Seeder-Fork/tree/38de080e1dee063279e347fb69631be6f5acf4b3",
+      "description": "Original green interface, address QR and CompactSeedQR.",
+      "qualification": "Green .1 image flashed and ROM-verified; green menu and both buttons physically confirmed. Full capture, camera and battery qualification remains separate.",
+      "source": "https://github.com/xberenguer/Seeder-Fork",
       "manual": "https://github.com/xberenguer/Seeder-Fork/blob/master/README-STICKS3.md",
       "files": [
         {
-          "id": "seeder-sticks3-38de080-merged.bin",
-          "url": "firmware/seeder-sticks3-38de080-merged.bin",
-          "bytes": 812384,
-          "sha256": "2f7d503aaf4e5067b847b9edda02f97ccb19c1af2b6b83aa641f017557bdd80a"
+          "id": "seeder-sticks3-2.2.0-sticks3.1-merged.bin",
+          "url": "firmware/seeder-sticks3-2.2.0-sticks3.1-merged.bin",
+          "bytes": 812448,
+          "sha256": "4aacbe515abb924d2c88eb1f33845e32453d431a9ed7571f592467a9055f68c2"
         }
       ],
       "parts": [
         {
-          "file": "seeder-sticks3-38de080-merged.bin",
+          "file": "seeder-sticks3-2.2.0-sticks3.1-merged.bin",
           "sourceOffset": 0,
           "length": 32768,
           "address": 0,
           "kind": "bootloader"
         },
         {
-          "file": "seeder-sticks3-38de080-merged.bin",
+          "file": "seeder-sticks3-2.2.0-sticks3.1-merged.bin",
           "sourceOffset": 32768,
           "length": 4096,
           "address": 32768,
           "kind": "partitions"
         },
         {
-          "file": "seeder-sticks3-38de080-merged.bin",
+          "file": "seeder-sticks3-2.2.0-sticks3.1-merged.bin",
           "sourceOffset": 57344,
           "length": 8192,
           "address": 57344,
           "kind": "ota"
         },
         {
-          "file": "seeder-sticks3-38de080-merged.bin",
+          "file": "seeder-sticks3-2.2.0-sticks3.1-merged.bin",
           "sourceOffset": 65536,
-          "length": 746848,
+          "length": 746912,
           "address": 65536,
           "kind": "application"
         }

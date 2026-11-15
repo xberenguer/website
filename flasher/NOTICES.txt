@@ -12,8 +12,8 @@ Verbatim license: vendor/noble/LICENSE.txt
 SHA-256 uses the browser Web Crypto implementation. MD5 is used only for
 ESP flash-protocol equality checks, not release authentication.
 
-The catalog checksums and files are served by this same website; the checksum
-does not independently authenticate the website. Seeder supports independent
+An Ed25519-signed catalog binds the firmware hashes to a pinned release public
+key. A fully compromised website could also replace its verification code/key. Seeder supports independent
 source builds and ROM verification; see its flashing and security documentation.
 
 Phoenix Link: an independent unofficial recreation, not affiliated with or

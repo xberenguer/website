@@ -13,6 +13,8 @@ export class DeviceConnection {
     await this.loader.chip.postConnect?.(this.loader);
     await this.loader.runStub();
     requireThat(this.loader.IS_STUB === true, 'Could not start the flash verification stub.');
+    await this.loader.flashSpiAttach(0);
+    this.loader.FLASH_READ_TIMEOUT=20000;
     const identity = await this.identify(); validateIdentity(identity,device);
     return identity;
   }

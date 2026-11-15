@@ -6,7 +6,7 @@ Live at **[🌠🌌.ws/flasher](https://xn--sg8hhb.ws/flasher/)**. Static files 
 
 | Project | Device | Frozen build | Status |
 |---|---|---|---|
-| Seeder Fork | M5Stack StickS3 / K150 | `2.2.0-sticks3-dev`, `38de080` | Previously flashed and ROM-verified |
+| Seeder Fork | M5Stack StickS3 / K150 | `2.2.0-sticks3.1`, original green palette | Flashed and ROM-verified |
 | Seeder Fork | Waveshare AMOLED 1.75C | `2.2.0-ws175c.8` | Previously flashed and readback-verified |
 | Phoenix Link / Confucius Say | M5Stack StickS3 / K150 | `0.2.93` candidate | Preview; installed and byte-verified, final physical display/audio acceptance pending |
 
@@ -17,13 +17,14 @@ This catalog contains the selected tested binaries, not automatically the newest
 1. Open the HTTPS page in desktop Chrome, Edge or another Web Serial browser. Use a USB data cable and close serial monitors.
 2. Select the exact device and project. Review the version, qualification, manual and file hashes.
 3. Put the board in flashing mode, confirm its physical model and click Connect. A chip/flash-capacity check alone cannot identify the display model.
-4. Prepare: files are SHA-256 checked; current flash sectors are read and verified. Save the `.bflash` recovery file before installing.
+4. Prepare: the release catalog signature and firmware SHA-256 are checked; current flash sectors are read and verified. Save the `.bflash` recovery file before installing.
 5. Install, wait for byte verification, then restart and inspect the screen/buttons.
 
 Flashing restarts the board. Save any current seed first. Recovery files cover flash sectors, not the seed held in volatile RAM. Private backup bytes and the session device MAC stay local. The server receives normal page/download requests only.
 
 ## Flash contract
 
+- Ed25519 verification of the signed release catalog before showing installation, using a pinned public key. See [release signatures and independent verification](SIGNING.md).
 - ESPLoader and Transport from vendored **esptool-js 0.7.1**; no whole-chip erase, no header rewriting, compressed stub writes only.
 - The ROM security check rejects secure-boot, secure-download and encrypted devices. Require ESP32-S3 image ID 9, expected flash capacity and a valid device identity.
 - Read exactly 4KB of partition table, parse every record, validate bounds/overlap/labels/checksum/footer. An erased terminator is accepted only with all-FF remaining bytes.

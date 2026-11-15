@@ -1,3 +1,4 @@
+import { verifySignedCatalog, RELEASE_KEY_FINGERPRINT } from './signing.js';
 import { fetchFiles, prepare, encodeBackup, decodeBackup, installTransaction, restoreTransaction, requireThat } from './core.js';
 import { DeviceConnection } from './serial.js';
 
@@ -21,7 +22,7 @@ function errorMessage(error) {
 function renderDevices() {
   $('devices').replaceChildren(...catalog.devices.map(d => {
     const b = el('button',undefined,'device'); b.type = 'button'; b.setAttribute('aria-pressed',String(device?.id === d.id)); b.setAttribute('aria-label',`Select ${d.name}`);
-    const frame = el('span',undefined,'device-image'); const img = el('img'); img.src=d.image; img.alt=d.name; frame.append(img);
+    const frame = el('span',undefined,'device-image'); const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox',d.viewBox); svg.setAttribute('role','img'); svg.setAttribute('aria-label',d.name); const clip=document.createElementNS('http://www.w3.org/2000/svg','clipPath'); clip.id='photo-'+d.id; const rect=document.createElementNS('http://www.w3.org/2000/svg','rect'); const box=d.viewBox.split(' '); ['x','y','width','height'].forEach((key,i)=>rect.setAttribute(key,box[i])); clip.append(rect); const defs=document.createElementNS('http://www.w3.org/2000/svg','defs'); defs.append(clip); svg.append(defs); const img=document.createElementNS('http://www.w3.org/2000/svg','image'); img.setAttribute('href',d.image); img.setAttribute('width','1774'); img.setAttribute('height','887'); img.setAttribute('clip-path','url(#photo-'+d.id+')'); svg.append(img); frame.append(svg);
     const text = el('span',undefined,'device-text'); text.append(el('strong',d.name),el('small',d.model)); b.append(frame,text,el('span','✓','device-mark'));
     b.onclick=()=>{ device=d; renderDevices(); renderProjects(); }; return b;
   }));
@@ -101,10 +102,10 @@ $('recovery-open').onclick=()=>{if(!busy&&!connection)$('backup-file').click();}
 $('backup-file').onchange=async()=>{
   const file=$('backup-file').files[0];$('backup-file').value='';if(!file)return;
   try{requireThat(file.size<9*1024*1024,'Recovery file is too large.');const recovered=await decodeBackup(new Uint8Array(await file.arrayBuffer()),catalog);openInstaller(catalog.releases.find(r=>r.id===recovered.release),recovered);}
-  catch(e){$('catalog-error').hidden=false;$('catalog-error').textContent=errorMessage(e);}
+  catch(e){$('signature-status').textContent='Release signature not verified — installation unavailable';$('catalog-error').hidden=false;$('catalog-error').textContent=errorMessage(e);}
 };
 window.addEventListener('beforeunload',e=>{if(mutating){e.preventDefault();e.returnValue='';}});
-try{const response=await fetch('catalog.json',{cache:'no-cache'});requireThat(response.ok,'Could not load the release catalog.');catalog=await response.json();requireThat(catalog.format===1,'Unsupported catalog.');renderDevices();
+try{const responses=await Promise.all([fetch('catalog.json',{cache:'no-cache'}),fetch('catalog.sig',{cache:'no-cache'})]); requireThat(responses.every(r=>r.ok),'Could not load the signed release catalog.'); const bytes=new Uint8Array(await responses[0].arrayBuffer()); const signature=new Uint8Array(await responses[1].arrayBuffer()); catalog=await verifySignedCatalog(bytes,signature); requireThat(catalog.format===1,'Unsupported catalog.'); $('signature-status').textContent='Release catalog signature verified · Ed25519'; $('signature-fingerprint').textContent=RELEASE_KEY_FINGERPRINT; renderDevices();
   $('other-projects').replaceChildren(...catalog.otherProjects.map(p=>{const a=link('',p.url);a.append(el('strong',p.name),el('span','↗'),el('small',p.detail));return a;}));
   $('unsupported').hidden=supportsUSB;
-}catch(e){$('catalog-error').hidden=false;$('catalog-error').textContent=errorMessage(e);}
+}catch(e){$('signature-status').textContent='Release signature not verified — installation unavailable';$('catalog-error').hidden=false;$('catalog-error').textContent=errorMessage(e);}
