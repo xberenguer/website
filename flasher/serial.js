@@ -1,10 +1,11 @@
+import { configureFlash } from './flash-read.js';
 import { ESPLoader, Transport } from './vendor/esptool-js-0.7.1.js';
 import { requireThat, validateIdentity } from './core.js';
 
 export class DeviceConnection {
   async connect(port, device) {
     this.transport = new Transport(port,false);
-    this.loader = new ESPLoader({ transport:this.transport, baudrate:115200, romBaudrate:115200,
+    this.loader = new ESPLoader({ transport:this.transport, baudrate:115200, romBaudrate:115200, serialOptions:{bufferSize:65536},
       terminal:{ clean(){}, write(){}, writeLine(){} } });
     await this.loader.detectChip('default_reset');
     requireThat(this.loader.chip.CHIP_NAME === 'ESP32-S3' && this.loader.chip.IMAGE_CHIP_ID === 9, 'Wrong chip: choose an ESP32-S3 device.');
@@ -16,6 +17,8 @@ export class DeviceConnection {
     await this.loader.flashSpiAttach(0);
     this.loader.FLASH_READ_TIMEOUT=20000;
     const identity = await this.identify(); validateIdentity(identity,device);
+    await configureFlash(this.loader,identity.capacity);
+    await this.loader.flashMd5sum(0x8000,4096);
     return identity;
   }
   async identify() {

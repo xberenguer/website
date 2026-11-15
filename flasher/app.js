@@ -61,7 +61,7 @@ $('connect').onclick=async()=>{
 };
 $('prepare').onclick=async()=>{
   if(busy||!connection||!identity)return;lock(true);actions();status('Checking firmware','Downloading the pinned release and checking its SHA-256 hashes.');
-  try { const files=await fetchFiles(release); plan=await prepare(connection.loader,release,device,identity,files,progress); $('progress').hidden=true;
+  try { const files=await fetchFiles(release,fetch,status); status('Download verified','Checking the connected flash.'); plan=await prepare(connection.loader,release,device,identity,files,progress); $('progress').hidden=true;
     if(!plan.ranges.length){status('Already up to date','Every selected firmware range matches this release. No flash was written.');actions('finish');}
     else {status('Recovery backup prepared',`${plan.ranges.length} changed flash ranges verified and backed up in this browser. Save the recovery file to enable installation.`);$('replace-warning').textContent=plan.replacingMap?'This replaces the current partition layout and application. The NVS region is skipped; saved settings may not transfer between projects.':'The matching device layout is retained. Only changed ranges will be written.';actions('save','finish');}
   }catch(e){plan=null;status('Preparation stopped',errorMessage(e)+' No flash was written.');$('progress').hidden=true;actions('prepare','finish');}

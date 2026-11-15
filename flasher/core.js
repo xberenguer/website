@@ -1,3 +1,4 @@
+import { readFlashFramed } from './flash-read.js';
 import { md5 } from './vendor/noble/legacy.js';
 import { bytesToHex } from './vendor/noble/utils.js';
 
@@ -77,30 +78,33 @@ export function validateParts(release, device, files) {
   if (device.id === 'waveshare175c') requireThat(parts.length === 1 && parts[0].address === 0x200000 && parts[0].kind === 'application', 'Waveshare requires an application-only image.');
   return parts;
 }
-export async function fetchFiles(release, fetcher = fetch) {
+export async function fetchFiles(release, fetcher = fetch, notify = () => {}) {
   const files = new Map();
   for (const file of release.files) {
     requireThat(/^firmware\/[a-zA-Z0-9._-]+\.bin$/.test(file.url), 'Invalid firmware URL.');
-    const response = await fetcher(file.url, { cache: 'no-cache' });
+    notify('Downloading firmware',file.id);
+    const response = await fetcher(file.url, { cache: 'no-store', signal: AbortSignal.timeout(60000) });
     requireThat(response.ok, `Could not download ${file.id}.`);
+    notify('Reading download',file.id);
     const data = new Uint8Array(await response.arrayBuffer());
+    notify('Checking download SHA-256',file.id);
     requireThat(data.length === file.bytes && await sha256(data) === file.sha256, `Integrity check failed for ${file.id}. No flash was written.`);
     files.set(file.id, data);
   }
   return files;
 }
 
-// esptool-js 0.7.1 leaves the stub's final 16-byte READ_FLASH digest in the stream.
-// Consume it here before issuing the next command, then verify the whole range too.
+// The framed reader owns every cumulative ACK and the trailing stub digest.
+// Verify the complete assembled range once more with the device MD5 command.
 export async function readVerified(loader, address, length, progress = () => {}) {
   requireThat(loader.IS_STUB === true && integer(length) && length > 0, 'A running flash stub is required.');
   const result = new Uint8Array(length);
   for (let offset = 0; offset < length; offset += 65536) {
     const size = Math.min(65536, length - offset);
-    const data = await loader.readFlash(address + offset, size);
-    requireThat(data instanceof Uint8Array && data.length === size, 'Incomplete flash backup.');
-    const digest = await loader.transport.read(loader.FLASH_READ_TIMEOUT);
-    requireThat(digest instanceof Uint8Array && digest.length === 16 && bytesToHex(digest) === md5Hex(data), 'Flash read digest mismatch.');
+    const data=await readFlashFramed(loader,address+offset,size,{
+      md5Hex,packetSize:512,maxInflight:64,
+      onStage:s=>{if(s.stage==='ack')progress((offset+s.received)/length);}
+    });
     result.set(data, offset); progress((offset + size) / length);
   }
   requireThat((await loader.flashMd5sum(address, length)).toLowerCase() === md5Hex(result), 'Device backup verification failed.');
