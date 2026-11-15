@@ -1,0 +1,327 @@
+{
+  "format": 1,
+  "projects": [
+    {
+      "id": "seeder",
+      "name": "Seeder",
+      "category": "Tools",
+      "summary": "Coin and dice input. Offline BIP39 seed generation.",
+      "credit": "Original Seeder by BitMaker, from an idea by Lunaticoin.",
+      "url": "https://github.com/xberenguer/Seeder-Fork"
+    },
+    {
+      "id": "phoenix",
+      "name": "Phoenix Link",
+      "category": "Games",
+      "summary": "Confucius Say recreation. Offline play-money game.",
+      "credit": "Independent, unofficial recreation. Preview build."
+    }
+  ],
+  "devices": [
+    {
+      "id": "sticks3",
+      "name": "M5Stack StickS3",
+      "model": "K150 \u00b7 ESP32-S3 \u00b7 8MB flash",
+      "flashBytes": 8388608,
+      "recovery": "Connect USB. Hold the separate power key until the green LED blinks, then release.",
+      "image": "images/sticks3.jpg"
+    },
+    {
+      "id": "waveshare175c",
+      "name": "Waveshare AMOLED 1.75C",
+      "model": "C model \u00b7 ESP32-S3 \u00b7 32MB flash",
+      "flashBytes": 33554432,
+      "recovery": "Hold BOOT while powering or resetting, then release BOOT. Keep the factory partition map.",
+      "image": "images/waveshare.png"
+    }
+  ],
+  "releases": [
+    {
+      "id": "seeder-sticks3-38de080",
+      "project": "seeder",
+      "device": "sticks3",
+      "version": "2.2.0-sticks3-dev \u00b7 38de080",
+      "status": "Tested build",
+      "description": "Blue rectangular interface, address QR and CompactSeedQR.",
+      "qualification": "Exact clean image flashed and ROM-verified; physical input, camera and battery qualification is partial.",
+      "source": "https://github.com/xberenguer/Seeder-Fork/tree/38de080e1dee063279e347fb69631be6f5acf4b3",
+      "manual": "https://github.com/xberenguer/Seeder-Fork/blob/master/README-STICKS3.md",
+      "files": [
+        {
+          "id": "seeder-sticks3-38de080-merged.bin",
+          "url": "firmware/seeder-sticks3-38de080-merged.bin",
+          "bytes": 812384,
+          "sha256": "2f7d503aaf4e5067b847b9edda02f97ccb19c1af2b6b83aa641f017557bdd80a"
+        }
+      ],
+      "parts": [
+        {
+          "file": "seeder-sticks3-38de080-merged.bin",
+          "sourceOffset": 0,
+          "length": 32768,
+          "address": 0,
+          "kind": "bootloader"
+        },
+        {
+          "file": "seeder-sticks3-38de080-merged.bin",
+          "sourceOffset": 32768,
+          "length": 4096,
+          "address": 32768,
+          "kind": "partitions"
+        },
+        {
+          "file": "seeder-sticks3-38de080-merged.bin",
+          "sourceOffset": 57344,
+          "length": 8192,
+          "address": 57344,
+          "kind": "ota"
+        },
+        {
+          "file": "seeder-sticks3-38de080-merged.bin",
+          "sourceOffset": 65536,
+          "length": 746848,
+          "address": 65536,
+          "kind": "application"
+        }
+      ],
+      "partitions": [
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 36864,
+          "size": 20480,
+          "label": "nvs",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 0,
+          "offset": 57344,
+          "size": 8192,
+          "label": "otadata",
+          "flags": 0
+        },
+        {
+          "type": 0,
+          "subtype": 16,
+          "offset": 65536,
+          "size": 3342336,
+          "label": "app0",
+          "flags": 0
+        }
+      ]
+    },
+    {
+      "id": "seeder-waveshare-2.2.0-ws175c.8",
+      "project": "seeder",
+      "device": "waveshare175c",
+      "version": "2.2.0-ws175c.8",
+      "status": "Tested build",
+      "description": "Green round-screen interface with the original BitMaker page set.",
+      "qualification": ".8 flashed and readback-verified; retains the physically accepted .7 layout. Camera and battery qualification is separate.",
+      "source": "https://github.com/xberenguer/Seeder-Fork",
+      "manual": "https://github.com/xberenguer/Seeder-Fork/blob/master/README-WAVESHARE175C.md",
+      "files": [
+        {
+          "id": "seeder-waveshare175c-2.2.0-ws175c.8.bin",
+          "url": "firmware/seeder-waveshare175c-2.2.0-ws175c.8.bin",
+          "bytes": 706400,
+          "sha256": "6c2e071401b6bca2b39d6dacb3a3f0bd2d5e8befd1e7ae37cf0f108422c2d622"
+        }
+      ],
+      "parts": [
+        {
+          "file": "seeder-waveshare175c-2.2.0-ws175c.8.bin",
+          "sourceOffset": 0,
+          "length": 706400,
+          "address": 2097152,
+          "kind": "application"
+        }
+      ],
+      "partitions": [
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 36864,
+          "size": 204800,
+          "label": "nvsfactory",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 241664,
+          "size": 860160,
+          "label": "nvs",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 0,
+          "offset": 1101824,
+          "size": 8192,
+          "label": "otadata",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 1,
+          "offset": 1110016,
+          "size": 4096,
+          "label": "phy_init",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 130,
+          "offset": 1114112,
+          "size": 983040,
+          "label": "model",
+          "flags": 0
+        },
+        {
+          "type": 0,
+          "subtype": 0,
+          "offset": 2097152,
+          "size": 6291456,
+          "label": "factory",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 130,
+          "offset": 8388608,
+          "size": 8388608,
+          "label": "storage",
+          "flags": 0
+        }
+      ]
+    },
+    {
+      "id": "phoenix-sticks3-0.2.93",
+      "project": "phoenix",
+      "device": "sticks3",
+      "version": "0.2.93 candidate",
+      "status": "Preview",
+      "description": "Offline Confucius Say / Phoenix Link-inspired play-money game.",
+      "qualification": "Installed and byte/readback-verified preview. Final physical display/audio acceptance is pending. This is not version 100.",
+      "source": "#phoenix-notes",
+      "manual": "#phoenix-notes",
+      "files": [
+        {
+          "id": "phoenix-confucius-sticks3-0.2.93.bin",
+          "url": "firmware/phoenix-confucius-sticks3-0.2.93.bin",
+          "bytes": 5759088,
+          "sha256": "21e524f92edcaf8d1ebade1304779fd86faa5242110b81de2f30c05c21984d43"
+        },
+        {
+          "id": "phoenix-confucius-assets-0.2.93.bin",
+          "url": "firmware/phoenix-confucius-assets-0.2.93.bin",
+          "bytes": 1572864,
+          "sha256": "acffb4e8b392321bf4767b679ed6a9a6fed95a41777524fa29bf510c92564181"
+        }
+      ],
+      "parts": [
+        {
+          "file": "phoenix-confucius-sticks3-0.2.93.bin",
+          "sourceOffset": 0,
+          "length": 32768,
+          "address": 0,
+          "kind": "bootloader"
+        },
+        {
+          "file": "phoenix-confucius-sticks3-0.2.93.bin",
+          "sourceOffset": 32768,
+          "length": 4096,
+          "address": 32768,
+          "kind": "partitions"
+        },
+        {
+          "file": "phoenix-confucius-sticks3-0.2.93.bin",
+          "sourceOffset": 57344,
+          "length": 8192,
+          "address": 57344,
+          "kind": "ota"
+        },
+        {
+          "file": "phoenix-confucius-sticks3-0.2.93.bin",
+          "sourceOffset": 65536,
+          "length": 5693552,
+          "address": 65536,
+          "kind": "application"
+        },
+        {
+          "file": "phoenix-confucius-assets-0.2.93.bin",
+          "sourceOffset": 0,
+          "length": 1572864,
+          "address": 6750208,
+          "kind": "assets"
+        }
+      ],
+      "partitions": [
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 36864,
+          "size": 20480,
+          "label": "nvs",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 0,
+          "offset": 57344,
+          "size": 8192,
+          "label": "otadata",
+          "flags": 0
+        },
+        {
+          "type": 0,
+          "subtype": 16,
+          "offset": 65536,
+          "size": 6684672,
+          "label": "app0",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 130,
+          "offset": 6750208,
+          "size": 1572864,
+          "label": "spiffs",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 3,
+          "offset": 8323072,
+          "size": 65536,
+          "label": "coredump",
+          "flags": 0
+        }
+      ]
+    }
+  ],
+  "otherProjects": [
+    {
+      "name": "Video Poker",
+      "detail": "Raspberry Pi SD images and documentation",
+      "url": "https://github.com/xberenguer/videopoker/releases"
+    },
+    {
+      "name": "Dino",
+      "detail": "Raspberry Pi beta SD images",
+      "url": "https://github.com/xberenguer/seedsigner-dino/releases"
+    },
+    {
+      "name": "Game builder",
+      "detail": "Build a Raspberry Pi SD image in your browser",
+      "url": "https://xberenguer.github.io/seedsigner-gba-builder/"
+    },
+    {
+      "name": "SeedLocker",
+      "detail": "Enclosure and printable hardware files",
+      "url": "https://github.com/xberenguer/SeedLocker"
+    }
+  ]
+}
