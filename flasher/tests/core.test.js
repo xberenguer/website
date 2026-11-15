@@ -14,8 +14,13 @@ function table(rows,checksum=true){
 }
 const files=new Map();for(const f of release.files)files.set(f.id,new Uint8Array(await readFile(new URL('../'+f.url,import.meta.url))));
 class FakeLoader {
-  constructor(){this.memory=new Uint8Array(device.flashBytes).fill(255);this.memory.set(table(release.partitions),0x8000);this.IS_STUB=true;this.FLASH_READ_TIMEOUT=1000;this.writes=[];this.failOnce=false;this.transport={read:async()=>this.pending};}
-  async readFlash(at,len){const bytes=this.memory.slice(at,at+len);this.pending=fromHex(md5Hex(bytes));return bytes;}
+  constructor(){this.memory=new Uint8Array(device.flashBytes).fill(255);this.memory.set(table(release.partitions),0x8000);this.IS_STUB=true;this.FLASH_READ_TIMEOUT=1000;this.writes=[];this.failOnce=false;this.ESP_READ_FLASH=0xd2;this.packets=[];this.transport={read:async()=>this.packets.shift(),write:async()=>{}};}
+  async checkCommand(name,op,request){
+    assert.equal(op,0xd2);const v=new DataView(request.buffer,request.byteOffset);const at=v.getUint32(0,true),len=v.getUint32(4,true),packet=v.getUint32(8,true);
+    const bytes=this.memory.slice(at,at+len);this.packets=[];
+    for(let offset=0;offset<len;offset+=packet)this.packets.push(bytes.slice(offset,offset+packet));
+    this.packets.push(this.badDigest?new Uint8Array(16):fromHex(md5Hex(bytes)));return 0;
+  }
   async flashMd5sum(at,len){return md5Hex(this.memory.subarray(at,at+len));}
   async writeFlash(options){assert.equal(options.eraseAll,false);assert.equal(options.compress,true);assert.equal(options.flashMode,'keep');assert.equal(options.flashFreq,'keep');assert.equal(options.flashSize,'keep');assert.equal(typeof options.calculateMD5Hash,'function');this.writes.push(options.fileArray.map(f=>f.address));
     for(const f of options.fileArray){this.memory.set(f.data,f.address);if(this.failOnce){this.failOnce=false;throw new Error('injected partial write');}}
@@ -57,7 +62,7 @@ test('download failure, wrong hash and wrong length leave writes unavailable',as
 });
 test('flash reads consume and validate each trailing stub digest',async()=>{
   const loader=new FakeLoader();const data=await readVerified(loader,0,131072);assert.equal(data.length,131072);
-  loader.transport.read=async()=>new Uint8Array(16);await assert.rejects(readVerified(loader,0,4096),/digest/);
+  loader.badDigest=true;await assert.rejects(readVerified(loader,0,4096),/digest/i);
   loader.IS_STUB=false;await assert.rejects(readVerified(loader,0,4096),/stub/);
 });
 test('preparation preserves sector tails and backs up only changed ranges',async()=>{
