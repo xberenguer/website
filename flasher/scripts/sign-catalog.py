@@ -28,7 +28,7 @@ if raw != expected_raw:
     raise SystemExit('Signing key differs from the published release key. Do not rotate keys silently.')
 catalog_bytes = (root / 'catalog.json').read_bytes()
 catalog = json.loads(catalog_bytes)
-for release in catalog['releases']:
+for release in [*catalog['releases'], *catalog.get('recoveryReleases', [])]:
     for item in release['files']:
         path = (root / item['url']).resolve()
         if not path.is_relative_to(root / 'firmware'):
