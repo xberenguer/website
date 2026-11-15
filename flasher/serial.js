@@ -1,10 +1,11 @@
 import { configureFlash } from './flash-read.js';
-import { ESPLoader, Transport } from './vendor/esptool-js-0.7.1.js';
+import { ESPLoader } from './vendor/esptool-js-0.7.1.js';
+import { QueuedTransport } from './serial-transport.js';
 import { requireThat, validateIdentity } from './core.js';
 
 export class DeviceConnection {
   async connect(port, device) {
-    this.transport = new Transport(port,false);
+    this.transport = new QueuedTransport(port);
     this.loader = new ESPLoader({ transport:this.transport, baudrate:115200, romBaudrate:115200, serialOptions:{bufferSize:65536},
       terminal:{ clean(){}, write(){}, writeLine(){} } });
     await this.loader.detectChip('default_reset');

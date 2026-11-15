@@ -57,6 +57,8 @@ export async function readFlashFramed(loader, address, length, {
     stage = 'verified'; notify();
     return result;
   } catch (cause) {
+    // A partial stream cannot be resumed by resending ACKs. Require reconnect.
+    loader.transport.invalidate?.(cause);
     throw new Error(`Flash read ${stage} failed (${received}/${length} bytes): ${cause.message}`, { cause });
   }
 }

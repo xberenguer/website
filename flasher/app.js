@@ -9,7 +9,8 @@ let busy = false, mutating = false, saved = false, resetOnClose = true;
 const el = (tag, text, cls) => { const n = document.createElement(tag); if (text !== undefined) n.textContent = text; if (cls) n.className = cls; return n; };
 const link = (text,url) => { const n = el('a',text); n.href = url; if(url.startsWith('#')) n.onclick=async()=>{ if(busy)return false; await disconnectAndClose(); const target=document.querySelector(url); if(target?.tagName==='DETAILS')target.open=true; target?.scrollIntoView(); }; return n; };
 const status = (title,message) => { $('stage').textContent = title; $('status').textContent = message; };
-function progress(title,value) { status(title,'Keep this tab open and the USB cable connected.'); $('progress').hidden = false; $('progress').value = value; }
+let lastProgressAt=0;
+function progress(title,value) { const now=performance.now(); const changed=$('stage').textContent!==title; if(changed)status(title,'Keep this tab open and the USB cable connected.'); const bar=$('progress'); if(changed||bar.hidden||value>=1||now-lastProgressAt>=50){bar.value=value;lastProgressAt=now;} bar.hidden=false; }
 function lock(value) {
   busy = value; $('close-dialog').disabled = value; $('model-confirm').disabled = value || !!connection;
   for (const id of ['connect','prepare','save','install','restore','finish']) $(id).disabled = value;
@@ -63,8 +64,8 @@ $('prepare').onclick=async()=>{
   if(busy||!connection||!identity)return;lock(true);actions();status('Checking firmware','Downloading the pinned release and checking its SHA-256 hashes.');
   try { const files=await fetchFiles(release,fetch,status); status('Download verified','Checking the connected flash.'); plan=await prepare(connection.loader,release,device,identity,files,progress); $('progress').hidden=true;
     if(!plan.ranges.length){status('Already up to date','Every selected firmware range matches this release. No flash was written.');actions('finish');}
-    else {status('Recovery backup prepared',`${plan.ranges.length} changed flash ranges verified and backed up in this browser. Save the recovery file to enable installation.`);$('replace-warning').textContent=plan.replacingMap?'This replaces the current partition layout and application. The NVS region is skipped; saved settings may not transfer between projects.':'The matching device layout is retained. Only changed ranges will be written.';actions('save','finish');}
-  }catch(e){plan=null;status('Preparation stopped',errorMessage(e)+' No flash was written.');$('progress').hidden=true;actions('prepare','finish');}
+    else {status('Recovery backup prepared',`${plan.ranges.length} changed flash ${plan.ranges.length===1?'range':'ranges'} verified and backed up in this browser. Save the recovery file to enable installation.`);$('replace-warning').textContent=plan.replacingMap?'This replaces the current partition layout and application. The NVS region is skipped; saved settings may not transfer between projects.':'The matching device layout is retained. Only changed ranges will be written.';actions('save','finish');}
+  }catch(e){plan=null;try{await connection?.close(true);}catch{}connection=null;identity=null;status('Preparation stopped',errorMessage(e)+' No flash was written. Reconnect before trying again.');$('progress').hidden=true;actions('connect');}
   finally{lock(false);}
 };
 $('save').onclick=async()=>{
@@ -101,8 +102,8 @@ $('installer').addEventListener('cancel',e=>{e.preventDefault();if(!busy)disconn
 $('recovery-open').onclick=()=>{if(!busy&&!connection)$('backup-file').click();};
 $('backup-file').onchange=async()=>{
   const file=$('backup-file').files[0];$('backup-file').value='';if(!file)return;
-  try{requireThat(file.size<9*1024*1024,'Recovery file is too large.');const recovered=await decodeBackup(new Uint8Array(await file.arrayBuffer()),catalog);openInstaller(catalog.releases.find(r=>r.id===recovered.release),recovered);}
-  catch(e){$('signature-status').textContent='Release signature not verified — installation unavailable';$('catalog-error').hidden=false;$('catalog-error').textContent=errorMessage(e);}
+  try{requireThat(file.size<9*1024*1024,'Recovery file is too large.');const recovered=await decodeBackup(new Uint8Array(await file.arrayBuffer()),catalog);const archived=[...catalog.releases,...(catalog.recoveryReleases||[])];$('catalog-error').hidden=true;openInstaller(archived.find(r=>r.id===recovered.release&&r.device===recovered.device),recovered);}
+  catch(e){$('catalog-error').hidden=false;$('catalog-error').textContent='Recovery file not accepted: '+errorMessage(e)+' No flash was written.';}
 };
 window.addEventListener('beforeunload',e=>{if(mutating){e.preventDefault();e.returnValue='';}});
 try{const responses=await Promise.all([fetch('catalog.json',{cache:'no-cache'}),fetch('catalog.sig',{cache:'no-cache'})]); requireThat(responses.every(r=>r.ok),'Could not load the signed release catalog.'); const bytes=new Uint8Array(await responses[0].arrayBuffer()); const signature=new Uint8Array(await responses[1].arrayBuffer()); catalog=await verifySignedCatalog(bytes,signature); requireThat(catalog.format===1,'Unsupported catalog.'); $('signature-status').textContent='Release catalog signature verified · Ed25519'; $('signature-fingerprint').textContent=RELEASE_KEY_FINGERPRINT; renderDevices();

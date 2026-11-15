@@ -102,7 +102,8 @@ export async function readVerified(loader, address, length, progress = () => {})
   for (let offset = 0; offset < length; offset += 65536) {
     const size = Math.min(65536, length - offset);
     const data=await readFlashFramed(loader,address+offset,size,{
-      md5Hex,packetSize:512,maxInflight:64,
+      // Even a fully escaped payload stays below 512 wire bytes on native USB.
+      md5Hex,packetSize:128,maxInflight:1,
       onStage:s=>{if(s.stage==='ack')progress((offset+s.received)/length);}
     });
     result.set(data, offset); progress((offset + size) / length);
@@ -151,7 +152,9 @@ export async function decodeBackup(bytes, catalog) {
   requireThat(size > 0 && size <= 65536 && 12+size < bytes.length, 'Invalid recovery manifest.');
   const manifest = JSON.parse(decoder.decode(bytes.subarray(12,12+size)));
   const device = catalog.devices.find(d => d.id === manifest.device);
-  const release = catalog.releases.find(r => r.id === manifest.release && r.device === manifest.device);
+  // A saved recovery file must remain usable after its release leaves the UI.
+  const release = [...catalog.releases, ...(catalog.recoveryReleases || [])]
+    .find(r => r.id === manifest.release && r.device === manifest.device);
   requireThat(manifest.format === 1 && device && release && Array.isArray(manifest.ranges) && manifest.ranges.length > 0 && manifest.ranges.length <= release.parts.length, 'Unsupported recovery file.');
   validateIdentity(manifest.identity, device);
   let at = 12+size; const used = new Set(); const ranges = [];

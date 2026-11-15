@@ -43,10 +43,10 @@
       "project": "seeder",
       "device": "sticks3",
       "version": "2.2.0-sticks3.1",
-      "status": "Tested build",
-      "description": "Original green interface, address QR and CompactSeedQR.",
-      "qualification": "Green .1 image flashed and ROM-verified; green menu and both buttons physically confirmed. Full capture, camera and battery qualification remains separate.",
-      "source": "https://github.com/xberenguer/Seeder-Fork",
+      "status": "Previous tested build",
+      "description": "Previous green StickS3 release. Aligned .3 source awaits device testing.",
+      "qualification": "Device-tested green .1 build: flashed and ROM-verified, menu and both buttons confirmed. It retains Compact QR, the earlier navigation/reset and captions, and the original splash typo. The aligned .3 source is build/host-tested but has not been flashed and is not offered here yet.",
+      "source": "https://github.com/xberenguer/Seeder-Fork/tree/e619415",
       "manual": "https://github.com/xberenguer/Seeder-Fork/blob/master/README-STICKS3.md",
       "files": [
         {
@@ -114,28 +114,28 @@
       ]
     },
     {
-      "id": "seeder-waveshare-2.2.0-ws175c.8",
+      "id": "seeder-waveshare-2.2.0-ws175c.9",
       "project": "seeder",
       "device": "waveshare175c",
-      "version": "2.2.0-ws175c.8",
-      "status": "Tested build",
-      "description": "Green round-screen interface with the original BitMaker page set.",
-      "qualification": ".8 flashed and readback-verified; retains the physically accepted .7 layout. Camera and battery qualification is separate.",
-      "source": "https://github.com/xberenguer/Seeder-Fork",
+      "version": "2.2.0-ws175c.9",
+      "status": "Browser verified",
+      "description": "Round Seeder interface with address QR and cancellable HOLD OK reset.",
+      "qualification": "The .9 app passed a complete Chrome USB install: signed download, factory-map check, verified and saved recovery backup, app-only write, device digest verification and restart. The same artifact also passed an independent ROM verification. Physical acceptance of the revised reset screen and a hardware restore-write test remain pending.",
+      "source": "https://github.com/xberenguer/Seeder-Fork/tree/1d9a563",
       "manual": "https://github.com/xberenguer/Seeder-Fork/blob/master/README-WAVESHARE175C.md",
       "files": [
         {
-          "id": "seeder-waveshare175c-2.2.0-ws175c.8.bin",
-          "url": "firmware/seeder-waveshare175c-2.2.0-ws175c.8.bin",
-          "bytes": 706400,
-          "sha256": "6c2e071401b6bca2b39d6dacb3a3f0bd2d5e8befd1e7ae37cf0f108422c2d622"
+          "id": "seeder-waveshare175c-2.2.0-ws175c.9.bin",
+          "url": "firmware/seeder-waveshare175c-2.2.0-ws175c.9.bin",
+          "bytes": 706272,
+          "sha256": "a6f43313ecd21f7b09432205a0405ba0f5b0dec655ba74335c3d78bb4731a0b7"
         }
       ],
       "parts": [
         {
-          "file": "seeder-waveshare175c-2.2.0-ws175c.8.bin",
+          "file": "seeder-waveshare175c-2.2.0-ws175c.9.bin",
           "sourceOffset": 0,
-          "length": 706400,
+          "length": 706272,
           "address": 2097152,
           "kind": "application"
         }
@@ -324,6 +324,94 @@
       "name": "SeedLocker",
       "detail": "Enclosure and printable hardware files",
       "url": "https://github.com/xberenguer/SeedLocker"
+    }
+  ],
+  "recoveryReleases": [
+    {
+      "id": "seeder-waveshare-2.2.0-ws175c.8",
+      "project": "seeder",
+      "device": "waveshare175c",
+      "version": "2.2.0-ws175c.8",
+      "status": "Tested build",
+      "description": "Green round-screen interface with the original BitMaker page set.",
+      "qualification": ".8 flashed and readback-verified; retains the physically accepted .7 layout. Camera and battery qualification is separate.",
+      "source": "https://github.com/xberenguer/Seeder-Fork/tree/afeae79",
+      "manual": "https://github.com/xberenguer/Seeder-Fork/blob/master/README-WAVESHARE175C.md",
+      "files": [
+        {
+          "id": "seeder-waveshare175c-2.2.0-ws175c.8.bin",
+          "url": "firmware/seeder-waveshare175c-2.2.0-ws175c.8.bin",
+          "bytes": 706400,
+          "sha256": "6c2e071401b6bca2b39d6dacb3a3f0bd2d5e8befd1e7ae37cf0f108422c2d622"
+        }
+      ],
+      "parts": [
+        {
+          "file": "seeder-waveshare175c-2.2.0-ws175c.8.bin",
+          "sourceOffset": 0,
+          "length": 706400,
+          "address": 2097152,
+          "kind": "application"
+        }
+      ],
+      "partitions": [
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 36864,
+          "size": 204800,
+          "label": "nvsfactory",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 241664,
+          "size": 860160,
+          "label": "nvs",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 0,
+          "offset": 1101824,
+          "size": 8192,
+          "label": "otadata",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 1,
+          "offset": 1110016,
+          "size": 4096,
+          "label": "phy_init",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 130,
+          "offset": 1114112,
+          "size": 983040,
+          "label": "model",
+          "flags": 0
+        },
+        {
+          "type": 0,
+          "subtype": 0,
+          "offset": 2097152,
+          "size": 6291456,
+          "label": "factory",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 130,
+          "offset": 8388608,
+          "size": 8388608,
+          "label": "storage",
+          "flags": 0
+        }
+      ]
     }
   ]
 }
