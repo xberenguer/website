@@ -10,9 +10,9 @@ Live at **[🌠🌌.ws/flasher](https://xn--sg8hhb.ws/flasher/)**. Static files 
 |---|---|---|---|
 | Seeder Fork | M5Stack StickS3 / K150 | `2.2.0-sticks3.1`, original green palette | Flashed and ROM-verified |
 | Seeder Fork | Waveshare AMOLED 1.75C | `2.2.0-ws175c.9` | App-only install with verified backup and independent ROM verification; reset visuals await acceptance |
-| Phoenix Link / Confucius Say | M5Stack StickS3 / K150 | `0.2.93` candidate | Preview; installed and byte-verified, final physical display/audio acceptance pending |
+| Phoenix Link / Confucius Say | M5Stack StickS3 / K150 | Exact latest published release pinned in the signed catalog | Firmware and browser-install qualification are recorded separately |
 
-This catalog contains the selected tested binaries, not automatically the newest commit in another project. Retired/unfinished pocketwatch, StatTrak and roulette builds are excluded. Raspberry Pi games link to their image downloads/builders; Web Serial does not write Raspberry Pi SD cards.
+The signed catalog pins exact published files. Phoenix updates are prepared from its latest stable GitHub release; a source commit without a published release is not installed. Retired/unfinished pocketwatch, StatTrak and roulette builds are excluded. Raspberry Pi games link to their image downloads/builders; Web Serial does not write Raspberry Pi SD cards.
 
 ## Use
 
@@ -61,7 +61,7 @@ Freeze an independently qualified artifact. Retain the exact binary, build/sourc
 
 ## Hosting and upkeep
 
-GitHub Pages serves the static site and roughly 9MB of selected firmware under the existing domain. No additional paid service is required for this implementation; hosting remains subject to GitHub Pages limits. Upkeep is versioned artifacts, license/source links, a current catalog and occasional browser/device regression testing. Adding releases does not require a server.
+GitHub Pages serves the static site and selected firmware under the existing domain. No additional paid service is required for this implementation; hosting remains subject to GitHub Pages limits. Upkeep is versioned artifacts, license/source links, a current catalog and occasional browser/device regression testing. Adding releases does not require a server.
 
 Original Seeder credit: **[BitMaker](https://github.com/BitMaker-hub/Seeder)** and **Lunaticoin**. [Fork manuals and every deviation](https://github.com/xberenguer/Seeder-Fork). [Licenses and notices](NOTICES.txt).
 
@@ -78,3 +78,23 @@ Read payloads are 128 bytes, so even fully escaped frames are at most 258 wire b
 For a development read check only, open `tests/usb-read.html` on the same local server. It resets a Waveshare 1.75C and uploads the stub to RAM, then compares table/firmware reads with signed references; it never writes flash. Use public test inputs and save any active seed first.
 
 [Recorded validation and exact firmware hashes](VALIDATION.md). Recovery imports were checked with both the real saved file and a public archived-release fixture; no restore write was attempted after the round board became unavailable.
+
+## Prepare a Phoenix release update
+
+The `Sync signed Phoenix release` GitHub Actions workflow checks every fifteen minutes and supports an immediate manual dispatch. It consumes `flasher-catalog.json` and `flasher-catalog.sig` attached to the latest stable Phoenix release. The signature, firmware hashes, image layout and exact catalog change are verified before updating the website. Previous Phoenix contracts remain available for recovery. An incompatible or unsigned release leaves the current installer unchanged.
+
+The release publisher runs the local helper after publishing the tested game binaries:
+
+```sh
+python3 flasher/scripts/publish-phoenix-bundle.py \
+  --tag v0.2.110 --key /private/location/key.pem \
+  --work-dir /tmp/new-phoenix-release-bundle --upload
+```
+
+This helper requires the existing signing environment, Node 22+ and authenticated GitHub CLI. It signs locally, uploads only the public catalog and detached signature, then dispatches the website workflow. The private key is never uploaded. Use a new work directory for each attempt. Publication of local development versions remains a separate maintainer decision.
+
+`python3 scripts/sync-phoenix.py --dry-run` checks only the public `xberenguer/phoenix-link-confucius-say` repository. It rejects drafts/prereleases, downgrades, changed bytes under the same version, corrupt images and incompatible partition maps. It checks the current signature and retained recovery files first. Use Node 22+ on PATH or `--node /path/to/node`.
+
+Use `--expected-tag v0.2.110 --stage /outside/website/phoenix-update` from the local milestone release workflow. The stage contains versioned local binaries and an unsigned catalog, retaining the prior Phoenix contract for recovery. The helper never signs, commits, deploys or contacts a board. The release workflow owns signing and publication; the private signing key stays local. Publish catalog/signature and files together after the usual checks. The browser continues to fetch only same-origin, signed, immutable files.
+
+`--check` returns 3 when an update is available, 0 when current, and 1 on validation/network failure. `--fixture-dir` exercises the same validators with explicit offline test inputs; it is not proof of a live GitHub publication. Run `python3 tests/test_sync_phoenix.py` and the existing Node tests before integrating an updater change.

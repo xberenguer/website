@@ -1,9 +1,9 @@
 name: Flasher checks
 on:
   push:
-    paths: ['flasher/**', '.github/workflows/flasher-checks.yml']
+    paths: ['flasher/**', '.github/workflows/flasher-checks.yml', '.github/workflows/phoenix-release-sync.yml']
   pull_request:
-    paths: ['flasher/**', '.github/workflows/flasher-checks.yml']
+    paths: ['flasher/**', '.github/workflows/flasher-checks.yml', '.github/workflows/phoenix-release-sync.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -17,3 +17,5 @@ jobs:
           node-version: '22'
       - name: Check signed catalog, binaries, protected ranges and recovery
         run: node --test flasher/tests/*.test.js
+      - name: Check release sync and signed update rejection
+        run: python3 -m unittest discover -s flasher/tests -p 'test_*.py'

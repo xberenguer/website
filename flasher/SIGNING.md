@@ -31,4 +31,6 @@ Keep the private key outside the website checkout and back it up privately. Use 
 
 Any change to the catalog requires a new signature. Publish the catalog, signature and pinned checker together. Tests reject a modified catalog, a missing/corrupt signature and a signature made by a different key. Firmware file corruption is rejected separately.
 
+Phoenix releases include a locally signed catalog bundle. The website's release-sync workflow verifies it with this same public key and permits only the expected Phoenix update and its recovery record. It verifies the downloaded firmware and runs the installer tests before committing the update and requesting a Pages build. The workflow has no private signing key. If another project's catalog has changed since signing, a new Phoenix update fails closed instead of replacing that project's release.
+
 Losing this **browser release-signing key** does not lock a device: the boards have no hardware Secure Boot rule. A replacement browser release key would require a clearly announced public-key change. This differs from losing a key after permanent device Secure Boot provisioning.
