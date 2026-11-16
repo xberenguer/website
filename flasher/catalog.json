@@ -21,7 +21,7 @@
       "name": "Stopwatch",
       "category": "Tools",
       "summary": "A button-only stopwatch. Start, pause, lap, reset.",
-      "url": "https://xn--sg8hhb.ws/stopwatch/"
+      "url": "https://github.com/xberenguer/stopwatch"
     }
   ],
   "devices": [
