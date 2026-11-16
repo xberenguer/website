@@ -6,7 +6,7 @@ import { sha256 } from '../core.js';
 const catalog=new Uint8Array(await readFile(new URL('../catalog.json',import.meta.url)));
 const signature=new Uint8Array(await readFile(new URL('../catalog.sig',import.meta.url)));
 test('published catalog signature verifies against pinned release key',async()=>{
-  const result=await verifySignedCatalog(catalog,signature);assert.equal(result.format,1);assert.equal(result.releases.length,3);
+  const result=await verifySignedCatalog(catalog,signature);assert.equal(result.format,1);assert.ok(result.releases.some(r=>r.project==='stopwatch'));assert.ok(result.releases.length>=4);
   const key=Uint8Array.from(TRUSTED_RELEASE_KEY.match(/../g).map(x=>parseInt(x,16)));assert.equal(await sha256(key),RELEASE_KEY_FINGERPRINT);
 });
 test('modified catalog, corrupted/missing signature or different signer fails closed',async()=>{

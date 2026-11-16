@@ -110,4 +110,7 @@ window.addEventListener('beforeunload',e=>{if(mutating){e.preventDefault();e.ret
 try{const responses=await Promise.all([fetch('catalog.json',{cache:'no-cache'}),fetch('catalog.sig',{cache:'no-cache'})]); requireThat(responses.every(r=>r.ok),'Could not load the signed release catalog.'); const bytes=new Uint8Array(await responses[0].arrayBuffer()); const signature=new Uint8Array(await responses[1].arrayBuffer()); catalog=await verifySignedCatalog(bytes,signature); requireThat(catalog.format===1,'Unsupported catalog.'); $('signature-status').textContent='Release catalog signature verified · Ed25519'; $('signature-fingerprint').textContent=RELEASE_KEY_FINGERPRINT; renderPhoenixNotes(catalog); renderDevices();
   $('other-projects').replaceChildren(...catalog.otherProjects.map(p=>{const a=link('',p.url);a.append(el('strong',p.name),el('span','↗'),el('small',p.detail));return a;}));
   $('unsupported').hidden=supportsUSB;
+  const project=new URL(location.href).searchParams.get('project');
+  const initial=catalog.releases.find(r=>r.project===project);
+  if(initial){device=catalog.devices.find(d=>d.id===initial.device);renderDevices();renderProjects();openInstaller(initial);}
 }catch(e){$('signature-status').textContent='Release signature not verified — installation unavailable';$('catalog-error').hidden=false;$('catalog-error').textContent=errorMessage(e);}

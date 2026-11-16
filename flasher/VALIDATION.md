@@ -29,3 +29,12 @@ The Waveshare app is installed at `0x200000`; factory bootloader, partition tabl
 The browser uses a persistent packet reader and 128-byte read payloads. Even a fully escaped data frame stays at or below 258 wire bytes. Larger native-USB read frames were intermittently truncated during development; the bounded configuration passed the repeated reads and full Waveshare installation above. A partial read invalidates that session and requires fresh detection; it is never resumed by resending ACKs.
 
 The signed catalog binds hashes, offsets, device maps and versions. It does not enable Secure Boot or program eFuses. The website and devices remain usable with other projects. Private signing material and device recovery files are kept outside the published site.
+
+## Stopwatch 1.0.0 — November 16, 2026
+
+- Exact 162,000-byte native Rust application, SHA-256 `092b94c642f199717a090e213cfb65bfde5c5ce5a5734e74c6ccfec2d4fc1886`.
+- Installed on the 32 MB Waveshare 1.75C with the verified Python installer, with private overwritten-sector backup, read-back verification and restart.
+- All 11 Rust host tests pass. The compact refactor's five preview states are pixel-identical to the preceding physically confirmed clean-text build.
+- Chrome local preview: project page Install link opens the Stopwatch 1.0.0 modal, selects Waveshare, and keeps Connect disabled until model confirmation.
+- Real Chrome USB connection detected ESP32-S3 / 32 MB, verified the signed download and factory partition table, compared the device application digest, and reported “Already up to date.” Restart/disconnect completed. This check did not write flash; it does not qualify this release's browser backup/install/restore-write path.
+- 33 Node installer checks and 52 Python release-sync checks pass. The new Stopwatch test exercises the shipped application's app-only install, sector-tail preservation and backup restoration with a fake loader.

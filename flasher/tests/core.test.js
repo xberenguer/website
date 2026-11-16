@@ -14,7 +14,7 @@ function table(rows,checksum=true){
 }
 const files=new Map();for(const f of release.files)files.set(f.id,new Uint8Array(await readFile(new URL('../'+f.url,import.meta.url))));
 class FakeLoader {
-  constructor(){this.memory=new Uint8Array(device.flashBytes).fill(255);this.memory.set(table(release.partitions),0x8000);this.IS_STUB=true;this.FLASH_READ_TIMEOUT=1000;this.writes=[];this.failOnce=false;this.ESP_READ_FLASH=0xd2;this.packets=[];this.transport={read:async()=>this.packets.shift(),write:async()=>{}};}
+  constructor(d=device,r=release){this.memory=new Uint8Array(d.flashBytes).fill(255);this.memory.set(table(r.partitions),0x8000);this.IS_STUB=true;this.FLASH_READ_TIMEOUT=1000;this.writes=[];this.failOnce=false;this.ESP_READ_FLASH=0xd2;this.packets=[];this.transport={read:async()=>this.packets.shift(),write:async()=>{}};}
   async checkCommand(name,op,request){
     assert.equal(op,0xd2);const v=new DataView(request.buffer,request.byteOffset);const at=v.getUint32(0,true),len=v.getUint32(4,true),packet=v.getUint32(8,true);
     const bytes=this.memory.slice(at,at+len);this.packets=[];
@@ -101,4 +101,24 @@ test('partial write restores exact old sectors; recovery accepts a damaged live 
 });
 test('disconnected rollback is never reported as verified',async()=>{
   const loader=new FakeLoader();const plan=await prepare(loader,release,device,identity,files);loader.failOnce=true;let calls=0;await assert.rejects(installTransaction(loader,plan,async()=>{if(++calls>1)throw Error('disconnected');return identity;}),/could not be verified/);
+});
+
+test('Stopwatch installs only its factory application, preserves sector tail and restores its backup',async()=>{
+  const r=catalog.releases.find(r=>r.project==='stopwatch');
+  const d=catalog.devices.find(d=>d.id===r.device);
+  const file=r.files[0], bytes=new Uint8Array(await readFile(new URL('../'+file.url,import.meta.url)));
+  const id={...identity,capacity:d.flashBytes};
+  const loader=new FakeLoader(d,r);
+  loader.memory.fill(77,0x9000,0x200000);
+  loader.memory.fill(99,0x200000,0x200000+roundUp(bytes.length));
+  const plan=await prepare(loader,r,d,id,new Map([[file.id,bytes]]));
+  assert.equal(plan.ranges.length,1);assert.equal(plan.ranges[0].address,0x200000);
+  assert.equal(plan.replacingMap,false);assert.equal(plan.ranges[0].after.at(-1),99);
+  const recovery=await decodeBackup(await encodeBackup(plan),catalog);
+  const result=await installTransaction(loader,plan,async()=>id);
+  assert.equal(result.installed,true);assert.deepEqual(loader.writes,[[0x200000]]);
+  assert.deepEqual(loader.memory.subarray(0x200000,0x200000+bytes.length),bytes);
+  assert.ok(loader.memory.subarray(0x9000,0x200000).every(x=>x===77));
+  await restoreTransaction(loader,recovery,d,async()=>id);
+  assert.deepEqual(loader.memory.subarray(0x200000,0x200000+roundUp(bytes.length)),recovery.ranges[0].before);
 });

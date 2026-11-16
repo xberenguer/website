@@ -15,13 +15,20 @@
       "category": "Games",
       "summary": "Confucius Say recreation. Offline play-money game.",
       "credit": "Independent, unofficial recreation. Preview build."
+    },
+    {
+      "id": "stopwatch",
+      "name": "Stopwatch",
+      "category": "Tools",
+      "summary": "A button-only stopwatch. Start, pause, lap, reset.",
+      "url": "https://xn--sg8hhb.ws/stopwatch/"
     }
   ],
   "devices": [
     {
       "id": "sticks3",
       "name": "M5Stack StickS3",
-      "model": "K150 · ESP32-S3 · 8MB flash",
+      "model": "K150 \u00b7 ESP32-S3 \u00b7 8MB flash",
       "flashBytes": 8388608,
       "recovery": "Connect USB. Hold the separate power key until the green LED blinks, then release.",
       "image": "images/devices.png",
@@ -30,7 +37,7 @@
     {
       "id": "waveshare175c",
       "name": "Waveshare AMOLED 1.75C",
-      "model": "C model · ESP32-S3 · 32MB flash",
+      "model": "C model \u00b7 ESP32-S3 \u00b7 32MB flash",
       "flashBytes": 33554432,
       "recovery": "Hold BOOT while powering or resetting, then release BOOT. Keep the factory partition map.",
       "image": "images/devices.png",
@@ -319,6 +326,92 @@
           }
         }
       }
+    },
+    {
+      "id": "stopwatch-waveshare175c-1.0.0",
+      "project": "stopwatch",
+      "device": "waveshare175c",
+      "version": "1.0.0",
+      "status": "Firmware verified",
+      "description": "Minimal Rust stopwatch. Buttons on top. Start, pause, lap and reset.",
+      "qualification": "Native Rust firmware installed on a 32MB Waveshare 1.75C and read-back verified. Eleven host tests pass; five screen states are pixel-identical to the preceding physically confirmed display build. Browser USB installation of this release has not been separately hardware-qualified.",
+      "source": "https://github.com/xberenguer/stopwatch/tree/v1.0.0",
+      "manual": "https://github.com/xberenguer/stopwatch/blob/v1.0.0/README.md",
+      "files": [
+        {
+          "id": "stopwatch-waveshare175c-1.0.0.bin",
+          "url": "firmware/stopwatch-waveshare175c-1.0.0.bin",
+          "bytes": 162000,
+          "sha256": "092b94c642f199717a090e213cfb65bfde5c5ce5a5734e74c6ccfec2d4fc1886"
+        }
+      ],
+      "parts": [
+        {
+          "file": "stopwatch-waveshare175c-1.0.0.bin",
+          "sourceOffset": 0,
+          "length": 162000,
+          "address": 2097152,
+          "kind": "application"
+        }
+      ],
+      "partitions": [
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 36864,
+          "size": 204800,
+          "label": "nvsfactory",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 241664,
+          "size": 860160,
+          "label": "nvs",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 0,
+          "offset": 1101824,
+          "size": 8192,
+          "label": "otadata",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 1,
+          "offset": 1110016,
+          "size": 4096,
+          "label": "phy_init",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 130,
+          "offset": 1114112,
+          "size": 983040,
+          "label": "model",
+          "flags": 0
+        },
+        {
+          "type": 0,
+          "subtype": 0,
+          "offset": 2097152,
+          "size": 6291456,
+          "label": "factory",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 130,
+          "offset": 8388608,
+          "size": 8388608,
+          "label": "storage",
+          "flags": 0
+        }
+      ]
     }
   ],
   "otherProjects": [

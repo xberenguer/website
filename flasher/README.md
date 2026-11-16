@@ -10,6 +10,7 @@ Live at **[🌠🌌.ws/flasher](https://xn--sg8hhb.ws/flasher/)**. Static files 
 |---|---|---|---|
 | Seeder Fork | M5Stack StickS3 / K150 | `2.2.0-sticks3.1`, original green palette | Flashed and ROM-verified |
 | Seeder Fork | Waveshare AMOLED 1.75C | `2.2.0-ws175c.9` | App-only install with verified backup and independent ROM verification; reset visuals await acceptance |
+| Stopwatch | Waveshare AMOLED 1.75C | `1.0.0` | Rust firmware installed and read-back verified; browser path not separately qualified |
 | Phoenix Link / Confucius Say | M5Stack StickS3 / K150 | Exact latest published release pinned in the signed catalog | Firmware and browser-install qualification are recorded separately |
 
 The signed catalog pins exact published files. Phoenix updates are prepared from its latest stable GitHub release; a source commit without a published release is not installed. Retired/unfinished pocketwatch, StatTrak and roulette builds are excluded. Raspberry Pi games link to their image downloads/builders; Web Serial does not write Raspberry Pi SD cards.

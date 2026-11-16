@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="A minimal, button-only stopwatch for the Waveshare AMOLED 1.75C. Written in Rust.">
+  <meta name="theme-color" content="#0b0b0b">
+  <link rel="canonical" href="https://xn--sg8hhb.ws/stopwatch/">
+  <title>Stopwatch — berenguer</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0b0b0b; color: #f3f3f1; font: 15px/1.5 "Helvetica Neue", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    main { width: min(100% - 40px, 560px); margin: 0 auto; padding: 42px 0 48px; text-align: center; }
+    nav { text-align: left; margin-bottom: 38px; }
+    a { color: inherit; text-underline-offset: 4px; }
+    nav a { color: #a0a0a0; font-size: 13px; text-decoration: none; }
+    h1 { margin: 0; font-size: clamp(34px, 8vw, 44px); font-weight: 400; letter-spacing: -1.5px; }
+    .device { margin: 7px 0 10px; color: #929292; font-size: 14px; }
+    img { display: block; width: min(100%, 360px); height: auto; margin: 20px auto 30px; border-radius: 50%; }
+    dl { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; max-width: 400px; margin: 0 auto 25px; }
+    dt { color: #888; font-size: 12px; margin-bottom: 4px; }
+    dd { margin: 0; font-size: 14px; }
+    .note { color: #888; font-size: 13px; margin: 0 0 28px; }
+    .links { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .links a { min-height: 44px; display: inline-flex; align-items: center; padding: 10px 23px; border: 1px solid #383838; border-radius: 24px; text-decoration: none; }
+    .links .install { background: #f3f3f1; color: #111; border-color: #f3f3f1; }
+    a:hover { opacity: .8; }
+    a:focus-visible { outline: 2px solid #b9d4ff; outline-offset: 5px; }
+    @media (max-width: 420px) { main { padding-top: 26px; } nav { margin-bottom: 28px; } dd { font-size: 13px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <nav><a href="/">← berenguer</a></nav>
+    <h1>Stopwatch</h1>
+    <p class="device">Waveshare AMOLED 1.75C · Rust</p>
+    <img src="dial.png" width="466" height="466" alt="Stopwatch display: a centered 00:00.00 on a black face, with Start and Reset above.">
+    <dl>
+      <div><dt>Large button · top left</dt><dd>Start · pause · resume</dd></div>
+      <div><dt>Small button · top right</dt><dd>Lap while running · reset when paused</dd></div>
+    </dl>
+    <p class="note">The latest lap appears below the total. Buttons only.</p>
+    <div class="links">
+      <a class="install" href="/flasher/?project=stopwatch">Install</a>
+      <a href="https://github.com/xberenguer/stopwatch">Source ↗</a>
+    </div>
+  </main>
+</body>
+</html>
