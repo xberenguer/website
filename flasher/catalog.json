@@ -207,60 +207,60 @@
       ]
     },
     {
-      "id": "phoenix-sticks3-0.2.141",
+      "id": "phoenix-sticks3-0.2.143",
       "project": "phoenix",
       "device": "sticks3",
-      "version": "0.2.141",
+      "version": "0.2.143",
       "status": "Published firmware",
       "description": "Offline Confucius Say / Phoenix Link-inspired play-money game.",
       "qualification": "Published stable Phoenix firmware. Release hashes, ESP32-S3 images and the 8MB partition contract were checked. Firmware publication does not itself qualify a browser USB installation on hardware.",
-      "source": "https://github.com/xberenguer/phoenix-link-confucius-say/tree/v0.2.141",
-      "manual": "https://github.com/xberenguer/phoenix-link-confucius-say/blob/v0.2.141/README.md",
+      "source": "https://github.com/xberenguer/phoenix-link-confucius-say/tree/v0.2.143",
+      "manual": "https://github.com/xberenguer/phoenix-link-confucius-say/blob/v0.2.143/README.md",
       "files": [
         {
-          "id": "phoenix-confucius-sticks3-0.2.141.bin",
-          "url": "firmware/phoenix-confucius-sticks3-0.2.141.bin",
-          "bytes": 5736992,
-          "sha256": "09db77b2ef58e8b4ed20aa544ec6c89505dbe4bb208e7a1f3eac53a9b989828a"
+          "id": "phoenix-confucius-sticks3-0.2.143.bin",
+          "url": "firmware/phoenix-confucius-sticks3-0.2.143.bin",
+          "bytes": 5794192,
+          "sha256": "d4bbbbf58c5e4d0a41528d3a5eb49e7824e0538196ec7b0be37ce270e7ca9c15"
         },
         {
-          "id": "phoenix-confucius-assets-0.2.141.bin",
-          "url": "firmware/phoenix-confucius-assets-0.2.141.bin",
+          "id": "phoenix-confucius-assets-0.2.143.bin",
+          "url": "firmware/phoenix-confucius-assets-0.2.143.bin",
           "bytes": 1572864,
           "sha256": "acffb4e8b392321bf4767b679ed6a9a6fed95a41777524fa29bf510c92564181"
         }
       ],
       "parts": [
         {
-          "file": "phoenix-confucius-sticks3-0.2.141.bin",
+          "file": "phoenix-confucius-sticks3-0.2.143.bin",
           "sourceOffset": 0,
           "length": 32768,
           "address": 0,
           "kind": "bootloader"
         },
         {
-          "file": "phoenix-confucius-sticks3-0.2.141.bin",
+          "file": "phoenix-confucius-sticks3-0.2.143.bin",
           "sourceOffset": 32768,
           "length": 4096,
           "address": 32768,
           "kind": "partitions"
         },
         {
-          "file": "phoenix-confucius-sticks3-0.2.141.bin",
+          "file": "phoenix-confucius-sticks3-0.2.143.bin",
           "sourceOffset": 57344,
           "length": 8192,
           "address": 57344,
           "kind": "ota"
         },
         {
-          "file": "phoenix-confucius-sticks3-0.2.141.bin",
+          "file": "phoenix-confucius-sticks3-0.2.143.bin",
           "sourceOffset": 65536,
-          "length": 5671456,
+          "length": 5728656,
           "address": 65536,
           "kind": "application"
         },
         {
-          "file": "phoenix-confucius-assets-0.2.141.bin",
+          "file": "phoenix-confucius-assets-0.2.143.bin",
           "sourceOffset": 0,
           "length": 1572864,
           "address": 6750208,
@@ -311,16 +311,16 @@
       ],
       "upstream": {
         "repository": "xberenguer/phoenix-link-confucius-say",
-        "tag": "v0.2.141",
-        "releaseId": 447716332,
+        "tag": "v0.2.143",
+        "releaseId": 447919319,
         "assets": {
           "phoenix-confucius-sticks3.bin": {
-            "id": 756760280,
-            "bytes": 5736992,
-            "sha256": "09db77b2ef58e8b4ed20aa544ec6c89505dbe4bb208e7a1f3eac53a9b989828a"
+            "id": 757177730,
+            "bytes": 5794192,
+            "sha256": "d4bbbbf58c5e4d0a41528d3a5eb49e7824e0538196ec7b0be37ce270e7ca9c15"
           },
           "feature-assets.bin": {
-            "id": 756760297,
+            "id": 757177721,
             "bytes": 1572864,
             "sha256": "acffb4e8b392321bf4767b679ed6a9a6fed95a41777524fa29bf510c92564181"
           }
@@ -1312,6 +1312,127 @@
           },
           "feature-assets.bin": {
             "id": 756491775,
+            "bytes": 1572864,
+            "sha256": "acffb4e8b392321bf4767b679ed6a9a6fed95a41777524fa29bf510c92564181"
+          }
+        }
+      }
+    },
+    {
+      "id": "phoenix-sticks3-0.2.141",
+      "project": "phoenix",
+      "device": "sticks3",
+      "version": "0.2.141",
+      "status": "Published firmware",
+      "description": "Offline Confucius Say / Phoenix Link-inspired play-money game.",
+      "qualification": "Published stable Phoenix firmware. Release hashes, ESP32-S3 images and the 8MB partition contract were checked. Firmware publication does not itself qualify a browser USB installation on hardware.",
+      "source": "https://github.com/xberenguer/phoenix-link-confucius-say/tree/v0.2.141",
+      "manual": "https://github.com/xberenguer/phoenix-link-confucius-say/blob/v0.2.141/README.md",
+      "files": [
+        {
+          "id": "phoenix-confucius-sticks3-0.2.141.bin",
+          "url": "firmware/phoenix-confucius-sticks3-0.2.141.bin",
+          "bytes": 5736992,
+          "sha256": "09db77b2ef58e8b4ed20aa544ec6c89505dbe4bb208e7a1f3eac53a9b989828a"
+        },
+        {
+          "id": "phoenix-confucius-assets-0.2.141.bin",
+          "url": "firmware/phoenix-confucius-assets-0.2.141.bin",
+          "bytes": 1572864,
+          "sha256": "acffb4e8b392321bf4767b679ed6a9a6fed95a41777524fa29bf510c92564181"
+        }
+      ],
+      "parts": [
+        {
+          "file": "phoenix-confucius-sticks3-0.2.141.bin",
+          "sourceOffset": 0,
+          "length": 32768,
+          "address": 0,
+          "kind": "bootloader"
+        },
+        {
+          "file": "phoenix-confucius-sticks3-0.2.141.bin",
+          "sourceOffset": 32768,
+          "length": 4096,
+          "address": 32768,
+          "kind": "partitions"
+        },
+        {
+          "file": "phoenix-confucius-sticks3-0.2.141.bin",
+          "sourceOffset": 57344,
+          "length": 8192,
+          "address": 57344,
+          "kind": "ota"
+        },
+        {
+          "file": "phoenix-confucius-sticks3-0.2.141.bin",
+          "sourceOffset": 65536,
+          "length": 5671456,
+          "address": 65536,
+          "kind": "application"
+        },
+        {
+          "file": "phoenix-confucius-assets-0.2.141.bin",
+          "sourceOffset": 0,
+          "length": 1572864,
+          "address": 6750208,
+          "kind": "assets"
+        }
+      ],
+      "partitions": [
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 36864,
+          "size": 20480,
+          "label": "nvs",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 0,
+          "offset": 57344,
+          "size": 8192,
+          "label": "otadata",
+          "flags": 0
+        },
+        {
+          "type": 0,
+          "subtype": 16,
+          "offset": 65536,
+          "size": 6684672,
+          "label": "app0",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 130,
+          "offset": 6750208,
+          "size": 1572864,
+          "label": "spiffs",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 3,
+          "offset": 8323072,
+          "size": 65536,
+          "label": "coredump",
+          "flags": 0
+        }
+      ],
+      "upstream": {
+        "repository": "xberenguer/phoenix-link-confucius-say",
+        "tag": "v0.2.141",
+        "releaseId": 447716332,
+        "assets": {
+          "phoenix-confucius-sticks3.bin": {
+            "id": 756760280,
+            "bytes": 5736992,
+            "sha256": "09db77b2ef58e8b4ed20aa544ec6c89505dbe4bb208e7a1f3eac53a9b989828a"
+          },
+          "feature-assets.bin": {
+            "id": 756760297,
             "bytes": 1572864,
             "sha256": "acffb4e8b392321bf4767b679ed6a9a6fed95a41777524fa29bf510c92564181"
           }
