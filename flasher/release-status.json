@@ -1,21 +1,21 @@
 {
-  "checkedAt": "2026-11-18T00:29:12+00:00",
+  "checkedAt": "2026-11-18T00:38:26+00:00",
   "projects": [
     {
       "project": "seeder",
       "repository": "xberenguer/Seeder-Fork",
-      "tag": null,
-      "releaseUrl": null,
-      "state": "unavailable",
-      "message": "GitHub metadata unavailable (HTTP 404)",
+      "tag": "v2.2.0-ports.1",
+      "releaseUrl": "https://github.com/xberenguer/Seeder-Fork/releases/tag/v2.2.0-ports.1",
+      "state": "current",
+      "message": "Latest published stable release verified.",
       "devices": [
         {
           "device": "sticks3",
-          "offeredVersion": "2.2.0-sticks3.1"
+          "offeredVersion": "2.2.0-sticks3.3"
         },
         {
           "device": "waveshare175c",
-          "offeredVersion": "2.2.0-ws175c.9"
+          "offeredVersion": "2.2.0-ws175c.10"
         }
       ]
     },

@@ -46,49 +46,49 @@
   ],
   "releases": [
     {
-      "id": "seeder-sticks3-2.2.0-sticks3.1",
+      "description": "Offline coin/dice seed generation with address QR and cancellable reset.",
+      "id": "seeder-sticks3-2.2.0-sticks3.3",
       "project": "seeder",
       "device": "sticks3",
-      "version": "2.2.0-sticks3.1",
-      "status": "Previous tested build",
-      "description": "Previous green StickS3 release. Aligned .3 source awaits device testing.",
-      "qualification": "Device-tested green .1 build: flashed and ROM-verified, menu and both buttons confirmed. It retains Compact QR, the earlier navigation/reset and captions, and the original splash typo. The aligned .3 source is build/host-tested but has not been flashed and is not offered here yet.",
-      "source": "https://github.com/xberenguer/Seeder-Fork/tree/e619415",
-      "manual": "https://github.com/xberenguer/Seeder-Fork/blob/master/README-STICKS3.md",
+      "version": "2.2.0-sticks3.3",
+      "status": "Published release",
+      "qualification": "Published stable release. Automated checks, firmware hashes and the device flash layout passed. This is not a claim of a new physical-device test.",
+      "source": "https://github.com/xberenguer/Seeder-Fork/tree/5acd7f51398a31931e3d3121b339cc77325baf84",
+      "manual": "https://github.com/xberenguer/Seeder-Fork/blob/v2.2.0-ports.1/README-STICKS3.md",
       "files": [
         {
-          "id": "seeder-sticks3-2.2.0-sticks3.1-merged.bin",
-          "url": "firmware/seeder-sticks3-2.2.0-sticks3.1-merged.bin",
-          "bytes": 812448,
-          "sha256": "4aacbe515abb924d2c88eb1f33845e32453d431a9ed7571f592467a9055f68c2"
+          "id": "seeder-sticks3-2.2.0-sticks3.3-merged.bin",
+          "url": "firmware/seeder-sticks3-2.2.0-sticks3.3-merged.bin",
+          "bytes": 812976,
+          "sha256": "117cb93a0e735032a954c2a20e31fe785f113d1136e6533b113dd4fb5d1643bb"
         }
       ],
       "parts": [
         {
-          "file": "seeder-sticks3-2.2.0-sticks3.1-merged.bin",
+          "file": "seeder-sticks3-2.2.0-sticks3.3-merged.bin",
           "sourceOffset": 0,
           "length": 32768,
           "address": 0,
           "kind": "bootloader"
         },
         {
-          "file": "seeder-sticks3-2.2.0-sticks3.1-merged.bin",
+          "file": "seeder-sticks3-2.2.0-sticks3.3-merged.bin",
           "sourceOffset": 32768,
           "length": 4096,
           "address": 32768,
           "kind": "partitions"
         },
         {
-          "file": "seeder-sticks3-2.2.0-sticks3.1-merged.bin",
+          "file": "seeder-sticks3-2.2.0-sticks3.3-merged.bin",
           "sourceOffset": 57344,
           "length": 8192,
           "address": 57344,
           "kind": "ota"
         },
         {
-          "file": "seeder-sticks3-2.2.0-sticks3.1-merged.bin",
+          "file": "seeder-sticks3-2.2.0-sticks3.3-merged.bin",
           "sourceOffset": 65536,
-          "length": 746912,
+          "length": 747440,
           "address": 65536,
           "kind": "application"
         }
@@ -118,31 +118,49 @@
           "label": "app0",
           "flags": 0
         }
-      ]
+      ],
+      "upstream": {
+        "repository": "xberenguer/Seeder-Fork",
+        "tag": "v2.2.0-ports.1",
+        "commit": "5acd7f51398a31931e3d3121b339cc77325baf84",
+        "releaseId": 449372330,
+        "assets": {
+          "flasher-release.json": {
+            "id": 761239087,
+            "bytes": 4302,
+            "sha256": "e6be5d9cdbf7cc865f696d79c62f8c7f317891a4c0e124a66470c1b1cb5c6bbe"
+          },
+          "seeder-sticks3-2.2.0-sticks3.3-merged.bin": {
+            "id": 761239086,
+            "bytes": 812976,
+            "sha256": "117cb93a0e735032a954c2a20e31fe785f113d1136e6533b113dd4fb5d1643bb"
+          }
+        }
+      }
     },
     {
-      "id": "seeder-waveshare-2.2.0-ws175c.9",
+      "description": "Offline coin/dice seed generation with address QR and cancellable reset.",
+      "id": "seeder-waveshare175c-2.2.0-ws175c.10",
       "project": "seeder",
       "device": "waveshare175c",
-      "version": "2.2.0-ws175c.9",
-      "status": "Browser verified",
-      "description": "Round Seeder interface with address QR and cancellable HOLD OK reset.",
-      "qualification": "The .9 app passed a complete Chrome USB install: signed download, factory-map check, verified and saved recovery backup, app-only write, device digest verification and restart. The same artifact also passed an independent ROM verification. Physical acceptance of the revised reset screen and a hardware restore-write test remain pending.",
-      "source": "https://github.com/xberenguer/Seeder-Fork/tree/1d9a563",
-      "manual": "https://github.com/xberenguer/Seeder-Fork/blob/master/README-WAVESHARE175C.md",
+      "version": "2.2.0-ws175c.10",
+      "status": "Published release",
+      "qualification": "Published stable release. Automated checks, firmware hashes and the device flash layout passed. This is not a claim of a new physical-device test.",
+      "source": "https://github.com/xberenguer/Seeder-Fork/tree/5acd7f51398a31931e3d3121b339cc77325baf84",
+      "manual": "https://github.com/xberenguer/Seeder-Fork/blob/v2.2.0-ports.1/README-WAVESHARE175C.md",
       "files": [
         {
-          "id": "seeder-waveshare175c-2.2.0-ws175c.9.bin",
-          "url": "firmware/seeder-waveshare175c-2.2.0-ws175c.9.bin",
-          "bytes": 706272,
-          "sha256": "a6f43313ecd21f7b09432205a0405ba0f5b0dec655ba74335c3d78bb4731a0b7"
+          "id": "seeder-waveshare175c-2.2.0-ws175c.10.bin",
+          "url": "firmware/seeder-waveshare175c-2.2.0-ws175c.10.bin",
+          "bytes": 706176,
+          "sha256": "dafc493057594e149d19272e2df18906357415977f1c27ea3da21ce3cab6882e"
         }
       ],
       "parts": [
         {
-          "file": "seeder-waveshare175c-2.2.0-ws175c.9.bin",
+          "file": "seeder-waveshare175c-2.2.0-ws175c.10.bin",
           "sourceOffset": 0,
-          "length": 706272,
+          "length": 706176,
           "address": 2097152,
           "kind": "application"
         }
@@ -204,7 +222,25 @@
           "label": "storage",
           "flags": 0
         }
-      ]
+      ],
+      "upstream": {
+        "repository": "xberenguer/Seeder-Fork",
+        "tag": "v2.2.0-ports.1",
+        "commit": "5acd7f51398a31931e3d3121b339cc77325baf84",
+        "releaseId": 449372330,
+        "assets": {
+          "flasher-release.json": {
+            "id": 761239087,
+            "bytes": 4302,
+            "sha256": "e6be5d9cdbf7cc865f696d79c62f8c7f317891a4c0e124a66470c1b1cb5c6bbe"
+          },
+          "seeder-waveshare175c-2.2.0-ws175c.10.bin": {
+            "id": 761239092,
+            "bytes": 706176,
+            "sha256": "dafc493057594e149d19272e2df18906357415977f1c27ea3da21ce3cab6882e"
+          }
+        }
+      }
     },
     {
       "id": "phoenix-sticks3-0.2.170",
@@ -1922,6 +1958,167 @@
           }
         }
       }
+    },
+    {
+      "id": "seeder-sticks3-2.2.0-sticks3.1",
+      "project": "seeder",
+      "device": "sticks3",
+      "version": "2.2.0-sticks3.1",
+      "status": "Previous tested build",
+      "description": "Previous green StickS3 release. Aligned .3 source awaits device testing.",
+      "qualification": "Device-tested green .1 build: flashed and ROM-verified, menu and both buttons confirmed. It retains Compact QR, the earlier navigation/reset and captions, and the original splash typo. The aligned .3 source is build/host-tested but has not been flashed and is not offered here yet.",
+      "source": "https://github.com/xberenguer/Seeder-Fork/tree/e619415",
+      "manual": "https://github.com/xberenguer/Seeder-Fork/blob/master/README-STICKS3.md",
+      "files": [
+        {
+          "id": "seeder-sticks3-2.2.0-sticks3.1-merged.bin",
+          "url": "firmware/seeder-sticks3-2.2.0-sticks3.1-merged.bin",
+          "bytes": 812448,
+          "sha256": "4aacbe515abb924d2c88eb1f33845e32453d431a9ed7571f592467a9055f68c2"
+        }
+      ],
+      "parts": [
+        {
+          "file": "seeder-sticks3-2.2.0-sticks3.1-merged.bin",
+          "sourceOffset": 0,
+          "length": 32768,
+          "address": 0,
+          "kind": "bootloader"
+        },
+        {
+          "file": "seeder-sticks3-2.2.0-sticks3.1-merged.bin",
+          "sourceOffset": 32768,
+          "length": 4096,
+          "address": 32768,
+          "kind": "partitions"
+        },
+        {
+          "file": "seeder-sticks3-2.2.0-sticks3.1-merged.bin",
+          "sourceOffset": 57344,
+          "length": 8192,
+          "address": 57344,
+          "kind": "ota"
+        },
+        {
+          "file": "seeder-sticks3-2.2.0-sticks3.1-merged.bin",
+          "sourceOffset": 65536,
+          "length": 746912,
+          "address": 65536,
+          "kind": "application"
+        }
+      ],
+      "partitions": [
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 36864,
+          "size": 20480,
+          "label": "nvs",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 0,
+          "offset": 57344,
+          "size": 8192,
+          "label": "otadata",
+          "flags": 0
+        },
+        {
+          "type": 0,
+          "subtype": 16,
+          "offset": 65536,
+          "size": 3342336,
+          "label": "app0",
+          "flags": 0
+        }
+      ]
+    },
+    {
+      "id": "seeder-waveshare-2.2.0-ws175c.9",
+      "project": "seeder",
+      "device": "waveshare175c",
+      "version": "2.2.0-ws175c.9",
+      "status": "Browser verified",
+      "description": "Round Seeder interface with address QR and cancellable HOLD OK reset.",
+      "qualification": "The .9 app passed a complete Chrome USB install: signed download, factory-map check, verified and saved recovery backup, app-only write, device digest verification and restart. The same artifact also passed an independent ROM verification. Physical acceptance of the revised reset screen and a hardware restore-write test remain pending.",
+      "source": "https://github.com/xberenguer/Seeder-Fork/tree/1d9a563",
+      "manual": "https://github.com/xberenguer/Seeder-Fork/blob/master/README-WAVESHARE175C.md",
+      "files": [
+        {
+          "id": "seeder-waveshare175c-2.2.0-ws175c.9.bin",
+          "url": "firmware/seeder-waveshare175c-2.2.0-ws175c.9.bin",
+          "bytes": 706272,
+          "sha256": "a6f43313ecd21f7b09432205a0405ba0f5b0dec655ba74335c3d78bb4731a0b7"
+        }
+      ],
+      "parts": [
+        {
+          "file": "seeder-waveshare175c-2.2.0-ws175c.9.bin",
+          "sourceOffset": 0,
+          "length": 706272,
+          "address": 2097152,
+          "kind": "application"
+        }
+      ],
+      "partitions": [
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 36864,
+          "size": 204800,
+          "label": "nvsfactory",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 241664,
+          "size": 860160,
+          "label": "nvs",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 0,
+          "offset": 1101824,
+          "size": 8192,
+          "label": "otadata",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 1,
+          "offset": 1110016,
+          "size": 4096,
+          "label": "phy_init",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 130,
+          "offset": 1114112,
+          "size": 983040,
+          "label": "model",
+          "flags": 0
+        },
+        {
+          "type": 0,
+          "subtype": 0,
+          "offset": 2097152,
+          "size": 6291456,
+          "label": "factory",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 130,
+          "offset": 8388608,
+          "size": 8388608,
+          "label": "storage",
+          "flags": 0
+        }
+      ]
     }
   ]
 }
