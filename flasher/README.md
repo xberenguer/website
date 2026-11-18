@@ -4,16 +4,19 @@
 
 Live at **[🌠🌌.ws/flasher](https://xn--sg8hhb.ws/flasher/)**. Static files on the existing GitHub Pages site. No backend, accounts, analytics or runtime CDN dependency. The website home page links here directly below Game Builder.
 
-## Catalog
+## Releases
 
-| Project | Device | Frozen build | Status |
-|---|---|---|---|
-| Seeder Fork | M5Stack StickS3 / K150 | `2.2.0-sticks3.1`, original green palette | Flashed and ROM-verified |
-| Seeder Fork | Waveshare AMOLED 1.75C | `2.2.0-ws175c.9` | App-only install with verified backup and independent ROM verification; reset visuals await acceptance |
-| Stopwatch | Waveshare AMOLED 1.75C | `1.0.0` | Rust firmware installed and read-back verified; browser path not separately qualified |
-| Phoenix Link / Confucius Say | M5Stack StickS3 / K150 | Exact latest published release pinned in the signed catalog | Firmware and browser-install qualification are recorded separately |
+The installer follows the newest **published stable GitHub release** for each configured project and device. It does not follow development commits, drafts or prereleases. Exact versions, source releases, validation status and last synchronization time appear on each project card; `catalog.json` is the authoritative list of offered artifacts.
 
-The signed catalog pins exact published files. Phoenix updates are prepared from its latest stable GitHub release; a source commit without a published release is not installed. Retired/unfinished pocketwatch, StatTrak and roulette builds are excluded. Raspberry Pi games link to their image downloads/builders; Web Serial does not write Raspberry Pi SD cards.
+| Project | Device | Release source |
+|---|---|---|
+| Seeder Fork | StickS3 / K150 and Waveshare AMOLED 1.75C | [Seeder Fork releases](https://github.com/xberenguer/Seeder-Fork/releases) |
+| Phoenix Link / Confucius Say | StickS3 / K150 | [Phoenix releases](https://github.com/xberenguer/phoenix-link-confucius-say/releases) |
+| Stopwatch | Waveshare AMOLED 1.75C | [Stopwatch releases](https://github.com/xberenguer/stopwatch/releases) |
+
+A published release is not a claim of physical testing for that exact binary. Hardware results remain separately stated. Missing, invalid or incomplete upstream releases leave the previous verified files available with an explicit blocked/unavailable status. Checks older than 45 minutes are marked unconfirmed. Previews are not automatically promoted into stable installs.
+
+Retired/unfinished pocketwatch, StatTrak and roulette builds are excluded. Raspberry Pi games link to their SD images/builders; Web Serial does not write SD cards.
 
 ## Use
 
@@ -56,9 +59,9 @@ python3 -m http.server 8767 --bind 127.0.0.1
 
 The tests exercise all shipped file sizes/hashes/maps, wrong devices, corrupt tables/downloads/backups, protected ranges, sector-tail preservation, identity changes, successful installs, interrupted writes, verified rollback and disconnected recovery using a fake loader. The vendored API was also exercised separately against esptool-js's compressed-write/read-digest behavior. Browser QA covers device filtering, both installer panels, confirmation gating and cancelled USB selection. **Waveshare .9 passed a full Chrome install:** signature/SHA-256, complete factory map, 708608-byte verified backup, actual private recovery file save, explicit app-only write, device MD5 and restart. Three additional table reads and three 64KiB reads matched the signed reference. The StickS3 browser path still needs hardware qualification; its installed firmware baseline was independently ROM-verified. A hardware restore-write test and post-browser independent ROM check remain pending; the same .9 artifact had already passed a separate ROM check. No destructive power-loss experiment has been performed.
 
-## Add a release
+## Add or publish a release
 
-Freeze an independently qualified artifact. Retain the exact binary, build/source identity, dependency notices, byte size and SHA-256. Add one catalog record with exact allowed slices and partition map; add a device profile only when its flash/recovery contract is implemented. Keep previous releases for recovery compatibility. Run the tests, browser-test the target flow, then qualify connect/backup/install/verification/reset and physical operation on the actual hardware before calling that browser path device-tested. Do not point an installer at mutable/latest binaries.
+See [release maintenance](RELEASING.md). Publish checked firmware in the project's GitHub Releases; the central workflow validates, signs, tests and deploys the corresponding catalog update. No manual whole-catalog bundle is required. New hardware still requires an explicitly reviewed device profile and flash contract.
 
 ## Hosting and upkeep
 
@@ -80,22 +83,12 @@ For a development read check only, open `tests/usb-read.html` on the same local 
 
 [Recorded validation and exact firmware hashes](VALIDATION.md). Recovery imports were checked with both the real saved file and a public archived-release fixture; no restore write was attempted after the round board became unavailable.
 
-## Prepare a Phoenix release update
+## Automatic release synchronization
 
-The `Sync signed Phoenix release` GitHub Actions workflow checks every fifteen minutes and supports an immediate manual dispatch. It consumes `flasher-catalog.json` and `flasher-catalog.sig` attached to the latest stable Phoenix release. The signature, firmware hashes, image layout and exact catalog change are verified before updating the website. Previous Phoenix contracts remain available for recovery. An incompatible or unsigned release leaves the current installer unchanged.
+`Sync firmware releases` runs every 15 minutes, supports manual dispatch, and accepts the `firmware-released` repository event. GitHub may delay scheduled jobs; the page shows the actual check time. The workflow handles all configured projects independently, archives replaced contracts for recovery, and verifies the live deployment after publication. Failed promotions produce a failed workflow and visible project status.
 
-The release publisher runs the local helper after publishing the tested game binaries:
+The browser loads one `catalog.signed.json` envelope containing the exact catalog bytes and Ed25519 signature. It then checks firmware SHA-256 and existing board/backup/write constraints. Idle tabs refresh every five minutes or when returning to the tab; an open installer keeps its selected artifact fixed.
 
-```sh
-python3 flasher/scripts/publish-phoenix-bundle.py \
-  --tag v0.2.110 --key /private/location/key.pem \
-  --work-dir /tmp/new-phoenix-release-bundle --upload
-```
+The signing key is an encrypted GitHub Actions environment secret restricted to the website's `main` branch. It is never committed or served. Project releases carry bounded, pinned asset identities; the website independently checks their bytes and flash layout before signing. [Signing and trust model](SIGNING.md).
 
-This helper requires the existing signing environment, Node 22+ and authenticated GitHub CLI. It signs locally, uploads only the public catalog and detached signature, then dispatches the website workflow. The private key is never uploaded. Use a new work directory for each attempt. Publication of local development versions remains a separate maintainer decision.
-
-`python3 scripts/sync-phoenix.py --dry-run` checks only the public `xberenguer/phoenix-link-confucius-say` repository. It rejects drafts/prereleases, downgrades, changed bytes under the same version, corrupt images and incompatible partition maps. It checks the current signature and retained recovery files first. Use Node 22+ on PATH or `--node /path/to/node`.
-
-Use `--expected-tag v0.2.110 --stage /outside/website/phoenix-update` from the local milestone release workflow. The stage contains versioned local binaries and an unsigned catalog, retaining the prior Phoenix contract for recovery. The helper never signs, commits, deploys or contacts a board. The release workflow owns signing and publication; the private signing key stays local. Publish catalog/signature and files together after the usual checks. The browser continues to fetch only same-origin, signed, immutable files.
-
-`--check` returns 3 when an update is available, 0 when current, and 1 on validation/network failure. `--fixture-dir` exercises the same validators with explicit offline test inputs; it is not proof of a live GitHub publication. Run `python3 tests/test_sync_phoenix.py` and the existing Node tests before integrating an updater change.
+The old Phoenix-specific scripts remain for verifying historical bundles, but their scheduled workflow is retired. Do not use an old whole-catalog bundle to replace the current multi-project catalog.

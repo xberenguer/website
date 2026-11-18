@@ -1,11 +1,12 @@
 import { renderPhoenixNotes } from './phoenix-notes.js';
-import { verifySignedCatalog, RELEASE_KEY_FINGERPRINT } from './signing.js';
+import { loadSignedCatalog, RELEASE_KEY_FINGERPRINT } from './signing.js';
+import { fetchReleaseStatus, describeReleaseStatus, pinRelease } from './release-status.js';
 import { fetchFiles, prepare, encodeBackup, decodeBackup, installTransaction, restoreTransaction, requireThat } from './core.js';
 import { DeviceConnection } from './serial.js';
 
 const $ = id => document.getElementById(id);
 const supportsUSB = isSecureContext && !!navigator.serial && !!crypto.subtle;
-let catalog, device, release, connection, identity, plan, recoveryPlan;
+let catalog, releaseStatus, device, release, connection, identity, plan, recoveryPlan;
 let busy = false, mutating = false, saved = false, resetOnClose = true;
 const el = (tag, text, cls) => { const n = document.createElement(tag); if (text !== undefined) n.textContent = text; if (cls) n.className = cls; return n; };
 const link = (text,url) => { const n = el('a',text); n.href = url; if(url.startsWith('#')) n.onclick=async()=>{ if(busy)return false; await disconnectAndClose(); const target=document.querySelector(url); if(target?.tagName==='DETAILS')target.open=true; target?.scrollIntoView(); }; return n; };
@@ -34,14 +35,19 @@ function renderProjects() {
   $('projects').replaceChildren(...catalog.releases.filter(r=>r.device === device.id).map(r=>{
     const p=catalog.projects.find(p=>p.id===r.project); const card=el('article',undefined,'project');
     card.append(el('p',p.category.toUpperCase(),'category'),el('h3',p.name),el('p',r.description),el('p',r.version,'version'));
+    const sync = describeReleaseStatus(releaseStatus,r);
+    card.append(el('p',sync.message,'qualification'));
+    if(sync.releaseUrl)card.append(link('GitHub release ↗',sync.releaseUrl));
+    card.append(link('Source / build notes ↗',r.source));
     const bottom=el('div',undefined,'project-bottom'); const b=el('button','View & install →'); b.onclick=()=>openInstaller(r); bottom.append(el('span',r.status,'badge'+(r.status==='Preview'?' preview':'')),b); card.append(bottom); return card;
   }));
 }
 function openInstaller(r,restore) {
-  release=r; recoveryPlan=restore||null; device=catalog.devices.find(d=>d.id===r.device); plan=null; saved=false; identity=null; resetOnClose=true;
+  r=pinRelease(r); release=r; recoveryPlan=restore||null; device=catalog.devices.find(d=>d.id===r.device); plan=null; saved=false; identity=null; resetOnClose=true;
   $('install-title').textContent=restore?'Restore previous firmware':catalog.projects.find(p=>p.id===r.project).name;
   $('install-subtitle').textContent=`${device.name} · ${restore?'Recovery backup':r.version}`;
   const info=$('release-info'); info.replaceChildren(el('span',r.status,'badge'+(r.status==='Preview'?' preview':'')),el('p',restore?'This restores the saved flash sectors to the same physical device.':r.qualification));
+  if(!restore){const sync=describeReleaseStatus(releaseStatus,r);info.append(el('p',sync.message));if(sync.releaseUrl)info.append(link('GitHub release',sync.releaseUrl),document.createTextNode(' · '));}
   info.append(link('Project manual',r.manual),document.createTextNode(' · '),link('Source / build notes',r.source));
   if (!restore) { const details=el('details'); details.append(el('summary','Firmware files & SHA-256')); const list=el('ul'); for(const f of r.files){const item=el('li');item.append(link(f.id,f.url),el('p',`${f.bytes.toLocaleString()} bytes`),el('code',f.sha256));list.append(item);}details.append(list);info.append(details); }
   $('recovery-guide').textContent=device.recovery;
@@ -64,7 +70,7 @@ $('connect').onclick=async()=>{
 $('prepare').onclick=async()=>{
   if(busy||!connection||!identity)return;lock(true);actions();status('Checking firmware','Downloading the pinned release and checking its SHA-256 hashes.');
   try { const files=await fetchFiles(release,fetch,status); status('Download verified','Checking the connected flash.'); plan=await prepare(connection.loader,release,device,identity,files,progress); $('progress').hidden=true;
-    if(!plan.ranges.length){status('Already up to date','Every selected firmware range matches this release. No flash was written.');actions('finish');}
+    if(!plan.ranges.length){status('This version is already installed',`Every selected firmware range matches ${release.version}. No flash was written.`);actions('finish');}
     else {status('Recovery backup prepared',`${plan.ranges.length} changed flash ${plan.ranges.length===1?'range':'ranges'} verified and backed up in this browser. Save the recovery file to enable installation.`);$('replace-warning').textContent=plan.replacingMap?'This replaces the current partition layout and application. The NVS region is skipped; saved settings may not transfer between projects.':'The matching device layout is retained. Only changed ranges will be written.';actions('save','finish');}
   }catch(e){plan=null;try{await connection?.close(true);}catch{}connection=null;identity=null;status('Preparation stopped',errorMessage(e)+' No flash was written. Reconnect before trying again.');$('progress').hidden=true;actions('connect');}
   finally{lock(false);}
@@ -107,7 +113,33 @@ $('backup-file').onchange=async()=>{
   catch(e){$('catalog-error').hidden=false;$('catalog-error').textContent='Recovery file not accepted: '+errorMessage(e)+' No flash was written.';}
 };
 window.addEventListener('beforeunload',e=>{if(mutating){e.preventDefault();e.returnValue='';}});
-try{const responses=await Promise.all([fetch('catalog.json',{cache:'no-cache'}),fetch('catalog.sig',{cache:'no-cache'})]); requireThat(responses.every(r=>r.ok),'Could not load the signed release catalog.'); const bytes=new Uint8Array(await responses[0].arrayBuffer()); const signature=new Uint8Array(await responses[1].arrayBuffer()); catalog=await verifySignedCatalog(bytes,signature); requireThat(catalog.format===1,'Unsupported catalog.'); $('signature-status').textContent='Release catalog signature verified · Ed25519'; $('signature-fingerprint').textContent=RELEASE_KEY_FINGERPRINT; renderPhoenixNotes(catalog); renderDevices();
+// A background refresh never changes an open installer's pinned release.
+let refreshing=false;
+async function refreshCatalog() {
+  if(refreshing||busy||connection||$('installer').open||!catalog||document.hidden)return;
+  refreshing=true;
+  try {
+    const [next,nextStatus]=await Promise.all([loadSignedCatalog(),fetchReleaseStatus()]);
+    // The user may have opened an installer while the requests were in flight.
+    if(busy||connection||$('installer').open)return;
+    const selected=device?.id;
+    catalog=next;releaseStatus=nextStatus;
+    device=catalog.devices.find(d=>d.id===selected);
+    $('catalog-error').hidden=true;renderPhoenixNotes(catalog);renderDevices();
+    if(device)renderProjects();
+  } catch(e) {
+    if(busy||connection||$('installer').open)return;
+    releaseStatus=null;
+    $('catalog-error').hidden=false;
+    $('catalog-error').textContent='Release refresh failed. Showing previously verified versions; latest release not confirmed. '+errorMessage(e);
+    if(device)renderProjects();
+  } finally {refreshing=false;}
+}
+setInterval(refreshCatalog,5*60000);
+// Recompute the age label even if a sync service has stopped producing updates.
+setInterval(()=>{if(device&&!busy&&!connection&&!$('installer').open)renderProjects();},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshCatalog();});
+try{[catalog,releaseStatus]=await Promise.all([loadSignedCatalog(),fetchReleaseStatus()]); $('signature-status').textContent='Release catalog signature verified · Ed25519'; $('signature-fingerprint').textContent=RELEASE_KEY_FINGERPRINT; renderPhoenixNotes(catalog); renderDevices();
   $('other-projects').replaceChildren(...catalog.otherProjects.map(p=>{const a=link('',p.url);a.append(el('strong',p.name),el('span','↗'),el('small',p.detail));return a;}));
   $('unsupported').hidden=supportsUSB;
   const project=new URL(location.href).searchParams.get('project');

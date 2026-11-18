@@ -1,0 +1,91 @@
+name: Sync firmware releases
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [firmware-released]
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: firmware-release-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: flasher-release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install signing dependency
+        run: python -m pip install cryptography==46.0.3
+      - name: Stage published stable releases
+        id: sync
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FLASHER_SIGNING_KEY: ${{ secrets.FLASHER_SIGNING_KEY }}
+        run: |
+          test -n "$FLASHER_SIGNING_KEY"
+          python flasher/scripts/sync-releases.py --stage "$RUNNER_TEMP/firmware-stage" --key-env FLASHER_SIGNING_KEY > "$RUNNER_TEMP/sync-result.json"
+      - name: Apply verified stage
+        run: |
+          test -d "$RUNNER_TEMP/firmware-stage/flasher"
+          cp -a "$RUNNER_TEMP/firmware-stage/flasher/." flasher/
+      - name: Verify catalog, firmware and installer regression tests
+        run: |
+          node --test flasher/tests/*.test.js
+          python -m unittest discover -s flasher/tests -p 'test_*.py'
+      - name: Publish catalog and release-check status
+        id: publish
+        run: |
+          git add flasher/catalog.json flasher/catalog.sig flasher/catalog.signed.json flasher/release-status.json flasher/firmware/
+          if git diff --cached --quiet; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          else
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git commit -m "Sync verified GitHub firmware releases"
+            git push origin HEAD:main
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+      # GITHUB_TOKEN commits do not start the legacy Pages build themselves.
+      - name: Request Pages deployment
+        if: steps.publish.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/$GITHUB_REPOSITORY/pages/builds" --jq '.status'
+      - name: Verify deployed catalog, signature and firmware
+        if: steps.publish.outputs.changed == 'true'
+        run: python flasher/scripts/verify-live.py --url https://xn--sg8hhb.ws/flasher/ --attempts 30 --interval 10
+      - name: Record release status
+        if: always()
+        run: |
+          if [ -f flasher/release-status.json ]; then
+            python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          s=json.load(open('flasher/release-status.json'))
+          print('Release check: '+s['checkedAt'])
+          for p in s['projects']:
+              print('\n- '+p['project']+': **'+p['state']+'** — '+p['message'])
+          PY
+          fi
+      - name: Fail visibly when a release cannot be promoted
+        if: steps.sync.outcome == 'failure'
+        run: |
+          echo 'One or more releases were blocked. The page lists the reason and retains the last verified files.'
+          exit 1

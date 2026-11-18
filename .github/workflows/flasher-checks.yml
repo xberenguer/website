@@ -1,9 +1,9 @@
 name: Flasher checks
 on:
   push:
-    paths: ['flasher/**', '.github/workflows/flasher-checks.yml', '.github/workflows/phoenix-release-sync.yml']
+    paths: ['flasher/**', '.github/workflows/flasher-checks.yml', '.github/workflows/release-sync.yml']
   pull_request:
-    paths: ['flasher/**', '.github/workflows/flasher-checks.yml', '.github/workflows/phoenix-release-sync.yml']
+    paths: ['flasher/**', '.github/workflows/flasher-checks.yml', '.github/workflows/release-sync.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -15,6 +15,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install cryptography==46.0.3
       - name: Check signed catalog, binaries, protected ranges and recovery
         run: node --test flasher/tests/*.test.js
       - name: Check release sync and signed update rejection

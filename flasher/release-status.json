@@ -1,0 +1,51 @@
+{
+  "checkedAt": "2026-11-18T00:23:06+00:00",
+  "projects": [
+    {
+      "project": "seeder",
+      "repository": "xberenguer/Seeder-Fork",
+      "tag": null,
+      "releaseUrl": null,
+      "state": "unavailable",
+      "message": "GitHub metadata unavailable (HTTP 404)",
+      "devices": [
+        {
+          "device": "sticks3",
+          "offeredVersion": "2.2.0-sticks3.1"
+        },
+        {
+          "device": "waveshare175c",
+          "offeredVersion": "2.2.0-ws175c.9"
+        }
+      ]
+    },
+    {
+      "project": "phoenix",
+      "repository": "xberenguer/phoenix-link-confucius-say",
+      "tag": "v0.2.170",
+      "releaseUrl": "https://github.com/xberenguer/phoenix-link-confucius-say/releases/tag/v0.2.170",
+      "state": "current",
+      "message": "Latest published stable release verified.",
+      "devices": [
+        {
+          "device": "sticks3",
+          "offeredVersion": "0.2.170"
+        }
+      ]
+    },
+    {
+      "project": "stopwatch",
+      "repository": "xberenguer/stopwatch",
+      "tag": "v1.1.1",
+      "releaseUrl": "https://github.com/xberenguer/stopwatch/releases/tag/v1.1.1",
+      "state": "current",
+      "message": "Latest published stable release verified.",
+      "devices": [
+        {
+          "device": "waveshare175c",
+          "offeredVersion": "1.1.1"
+        }
+      ]
+    }
+  ]
+}

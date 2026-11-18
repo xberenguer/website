@@ -14,10 +14,10 @@ Firmware qualification and browser-installer qualification are separate. This pa
 | Restore writes | Covered by software tests; a real hardware restore write remains pending |
 | Post-browser ROM check | Pending; the identical `.9` artifact had already passed a separate ROM check before the browser install |
 | StickS3 `.1` | Previous green build was flashed/ROM-verified and menu/both buttons physically confirmed. The updated browser transport has not completed a StickS3 hardware install |
-| StickS3 `.3` | Source and host/build checks are published in Seeder Fork; it has not been flashed and is not in this catalog |
+| StickS3 `.3` | Automated release packaging verifies the corrected splash bitmap in the compiled app. This exact CI release has not been physically tested. See the signed catalog for the offered build. |
 | Phoenix `.93` | Frozen installed/byte-verified preview; final display/audio acceptance remains pending |
 
-## Exact current Seeder artifacts
+## Previously physically checked Seeder artifacts
 
 | File | Bytes | SHA-256 |
 | --- | ---: | --- |
@@ -38,3 +38,12 @@ The signed catalog binds hashes, offsets, device maps and versions. It does not 
 - Chrome local preview: project page Install link opens the Stopwatch 1.0.0 modal, selects Waveshare, and keeps Connect disabled until model confirmation.
 - Real Chrome USB connection detected ESP32-S3 / 32 MB, verified the signed download and factory partition table, compared the device application digest, and reported “Already up to date.” Restart/disconnect completed. This check did not write flash; it does not qualify this release's browser backup/install/restore-write path.
 - 33 Node installer checks and 52 Python release-sync checks pass. The new Stopwatch test exercises the shipped application's app-only install, sector-tail preservation and backup restoration with a fake loader.
+
+## Automatic releases — November 17, 2026
+
+- 41 JavaScript checks cover signed atomic catalog loading, schema validation, stale status, immutable installer selection, image/device contracts, recovery and USB transport.
+- 66 Python checks cover release validation, automated signing, project isolation, tag/asset races, same-version immutability, fixed maps and historical bundle compatibility.
+- Seeder release packaging has 18 checks, including exact corrected StickS3 splash pixels in the compiled image and clean version/source provenance.
+- The website signing environment is restricted to the main branch; the existing trusted public key is unchanged.
+- No USB connection, physical flash or hardware acceptance was performed for this pipeline update. Browser automation was unavailable during this run; the actual signing/installer modules were exercised by tests.
+- Deployment is verified separately by comparing the live atomic catalog, detached signature and active firmware SHA-256 with the publication. Each automatic sync records its check/deployment outcome in GitHub Actions.
