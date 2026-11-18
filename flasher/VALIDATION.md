@@ -43,7 +43,7 @@ The signed catalog binds hashes, offsets, device maps and versions. It does not 
 
 - 41 JavaScript checks cover signed atomic catalog loading, schema validation, stale status, immutable installer selection, image/device contracts, recovery and USB transport.
 - 66 Python checks cover release validation, automated signing, project isolation, tag/asset races, same-version immutability, fixed maps and historical bundle compatibility.
-- Seeder release packaging has 18 checks, including exact corrected StickS3 splash pixels in the compiled image and clean version/source provenance.
+- Seeder release packaging has 22 checks, including exact corrected StickS3 splash pixels in the compiled image and clean version/source provenance.
 - The website signing environment is restricted to the main branch; the existing trusted public key is unchanged.
 - No USB connection, physical flash or hardware acceptance was performed for this pipeline update. Browser automation was unavailable during this run; the actual signing/installer modules were exercised by tests.
 - Deployment is verified separately by comparing the live atomic catalog, detached signature and active firmware SHA-256 with the publication. Each automatic sync records its check/deployment outcome in GitHub Actions.
