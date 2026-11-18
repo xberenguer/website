@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  checks: read
   pages: write
 
 concurrency:

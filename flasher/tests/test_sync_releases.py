@@ -40,6 +40,7 @@ def next_image(blob,old,new,start):
 class Provider:
     def __init__(self,catalog,config):
         self.meta={};self.data={};self.calls=[];self.mutate=None
+        self.required_checks={c['repository']:c.get('requiredChecks',[]) for c in config['projects']}
         for c in config['projects']:
             project=c['project'];repo=c['repository'];old=[r for r in catalog['releases'] if r['project']==project]
             assets={}
@@ -77,7 +78,8 @@ class Provider:
         if endpoint.startswith('git/ref/tags/'):
             result={'ref':'refs/tags/'+endpoint.removeprefix('git/ref/tags/'),'object':{'type':'commit','sha':COMMIT}}
         elif endpoint.startswith('commits/'):
-            result={'total_count':1,'check_runs':[{'id':1,'name':'audit','app':{'slug':'github-actions'},'head_sha':COMMIT,'status':'completed','conclusion':'success'}]}
+            names=self.required_checks[repo]
+            result={'total_count':len(names),'check_runs':[{'id':i+1,'name':name,'app':{'slug':'github-actions'},'head_sha':COMMIT,'status':'completed','conclusion':'success'} for i,name in enumerate(names)]}
         else:result=copy.deepcopy(self.meta[repo])
         if self.mutate:self.mutate(repo,endpoint,result)
         return result
@@ -134,9 +136,9 @@ class SyncTests(unittest.TestCase):
         _,_,status=self.execute();self.assertIn('identity differs',self.blocked(status,'seeder')['message'])
 
     def test_failed_or_missing_automated_gate_is_blocked(self):
-        for conclusion in ['failure',None]:
+        for index,conclusion in [(0,'failure'),(1,'failure'),(2,None)]:
             def mutate(repo,endpoint,result):
-                if endpoint.startswith('commits/'):result['check_runs'][0]['conclusion']=conclusion
+                if endpoint.startswith('commits/'):result['check_runs'][index]['conclusion']=conclusion
             self.provider.mutate=mutate
             _,_,status=self.execute();self.assertIn('has not passed',self.blocked(status,'seeder')['message'])
 

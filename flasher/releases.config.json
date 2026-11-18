@@ -7,7 +7,9 @@
       "adapter": "manifest",
       "manifest": "flasher-release.json",
       "requiredChecks": [
-        "audit"
+        "audit",
+        "firmware (sticks3, esp32s3, 0x0, 8MB)",
+        "firmware (waveshare175c, esp32s3, 32MB)"
       ],
       "devices": {
         "sticks3": {
