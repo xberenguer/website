@@ -462,56 +462,56 @@
       ]
     },
     {
-      "id": "blackjack-sticks3-0.11.3",
+      "id": "blackjack-sticks3-0.12.0",
       "project": "blackjack",
       "device": "sticks3",
-      "version": "0.11.3",
+      "version": "0.12.0",
       "contract": "blackjack-sticks3-v1",
       "status": "Preview",
       "description": "Offline blackjack, Hi-Lo practice, drills and session analysis with two-button controls.",
       "qualification": "Stable firmware release: native CI, source identity, image checksums and exact flash layout verified. The browser StickS3 installation and migration path remains a preview pending physical qualification.",
-      "source": "https://github.com/xberenguer/blackjack-trainer/tree/7cc15317c88776f64d1209b5e604fc16904dc239",
-      "manual": "https://github.com/xberenguer/blackjack-trainer/blob/v0.11.3/docs/INSTALL.md",
+      "source": "https://github.com/xberenguer/blackjack-trainer/tree/0edd6d2c3f9a81e546739f81fb524c50e4a89448",
+      "manual": "https://github.com/xberenguer/blackjack-trainer/blob/v0.12.0/docs/INSTALL.md",
       "files": [
         {
-          "id": "blackjack-sticks3-0.11.3-app.bin",
-          "url": "firmware/blackjack-sticks3-0.11.3-app.bin",
-          "bytes": 3352832,
-          "sha256": "50d47e4702087dad5fe4ca9510dbaca04a4825e8ea5b06d29f678c2468509335"
+          "id": "blackjack-sticks3-0.12.0-app.bin",
+          "url": "firmware/blackjack-sticks3-0.12.0-app.bin",
+          "bytes": 3354864,
+          "sha256": "a6d178b73858dd75e6cbf023dd4049853bbe375503bc991f323c27150dec5e0f"
         },
         {
-          "id": "blackjack-sticks3-0.11.3-install.bin",
-          "url": "firmware/blackjack-sticks3-0.11.3-install.bin",
-          "bytes": 3418368,
-          "sha256": "24bdfb7c5fe276bf02adc0f84d63c524f5cdb39365204bc9e4753bd4a31aa7c7"
+          "id": "blackjack-sticks3-0.12.0-install.bin",
+          "url": "firmware/blackjack-sticks3-0.12.0-install.bin",
+          "bytes": 3420400,
+          "sha256": "aea2c0b0db043e43d9ffc7e820b9cd91e23cf76fc08282d591fd891708a71368"
         }
       ],
       "parts": [
         {
-          "file": "blackjack-sticks3-0.11.3-install.bin",
+          "file": "blackjack-sticks3-0.12.0-install.bin",
           "sourceOffset": 0,
           "length": 32768,
           "address": 0,
           "kind": "bootloader"
         },
         {
-          "file": "blackjack-sticks3-0.11.3-install.bin",
+          "file": "blackjack-sticks3-0.12.0-install.bin",
           "sourceOffset": 32768,
           "length": 4096,
           "address": 32768,
           "kind": "partitions"
         },
         {
-          "file": "blackjack-sticks3-0.11.3-install.bin",
+          "file": "blackjack-sticks3-0.12.0-install.bin",
           "sourceOffset": 57344,
           "length": 8192,
           "address": 57344,
           "kind": "ota"
         },
         {
-          "file": "blackjack-sticks3-0.11.3-app.bin",
+          "file": "blackjack-sticks3-0.12.0-app.bin",
           "sourceOffset": 0,
-          "length": 3352832,
+          "length": 3354864,
           "address": 65536,
           "kind": "application"
         }
@@ -568,29 +568,154 @@
       ],
       "upstream": {
         "repository": "xberenguer/blackjack-trainer",
-        "tag": "v0.11.3",
-        "commit": "7cc15317c88776f64d1209b5e604fc16904dc239",
-        "releaseId": 451023308,
+        "tag": "v0.12.0",
+        "commit": "0edd6d2c3f9a81e546739f81fb524c50e4a89448",
+        "releaseId": 452021408,
         "assets": {
           "flasher-release.json": {
-            "id": 766758411,
-            "bytes": 2613,
-            "sha256": "0576c7150a9125af16aad03856506b8d1d1e1307146eb9cc9fc737372bcbc57a"
+            "id": 769547993,
+            "bytes": 4447,
+            "sha256": "fb5b49b79eb68601924b5a64070bde53bfc1e0f6b94d31a16765f4e16e7d810f"
           },
           "blackjack-sticks3-app.bin": {
-            "id": 766758283,
-            "bytes": 3352832,
-            "sha256": "50d47e4702087dad5fe4ca9510dbaca04a4825e8ea5b06d29f678c2468509335"
+            "id": 769546594,
+            "bytes": 3354864,
+            "sha256": "a6d178b73858dd75e6cbf023dd4049853bbe375503bc991f323c27150dec5e0f"
           },
           "blackjack-sticks3-install.bin": {
-            "id": 766758351,
-            "bytes": 3418368,
-            "sha256": "24bdfb7c5fe276bf02adc0f84d63c524f5cdb39365204bc9e4753bd4a31aa7c7"
+            "id": 769547470,
+            "bytes": 3420400,
+            "sha256": "aea2c0b0db043e43d9ffc7e820b9cd91e23cf76fc08282d591fd891708a71368"
+          },
+          "blackjack-waveshare175c-app.bin": {
+            "id": 769547699,
+            "bytes": 3402080,
+            "sha256": "ee96f2bb82503764f249bb8945a1578c2ec9ec094178b4dfc6fa80d7df40dd7d"
           },
           "SHA256SUMS": {
-            "id": 766758448,
-            "bytes": 275,
-            "sha256": "67a29dbe99caf38a5b34bdc32289992b3a09e1f3c28486fc26467a8b2baf0197"
+            "id": 769548051,
+            "bytes": 373,
+            "sha256": "d0143293ebd92ee6585c778e703d5aad81354909985209ef1452eb45f73d96df"
+          }
+        }
+      }
+    },
+    {
+      "id": "blackjack-waveshare175c-0.12.0",
+      "project": "blackjack",
+      "device": "waveshare175c",
+      "version": "0.12.0",
+      "contract": "blackjack-waveshare175c-v1",
+      "status": "Preview",
+      "description": "Offline blackjack, Hi-Lo practice, drills and session analysis with two-button controls.",
+      "qualification": "Stable firmware release: native CI, source identity, image checksums and exact flash layout verified. The browser Waveshare application-only installation remains a preview pending physical qualification. Factory data and private session regions are excluded from installer write authority.",
+      "source": "https://github.com/xberenguer/blackjack-trainer/tree/0edd6d2c3f9a81e546739f81fb524c50e4a89448",
+      "manual": "https://github.com/xberenguer/blackjack-trainer/blob/v0.12.0/docs/INSTALL.md",
+      "files": [
+        {
+          "id": "blackjack-waveshare175c-0.12.0-app.bin",
+          "url": "firmware/blackjack-waveshare175c-0.12.0-app.bin",
+          "bytes": 3402080,
+          "sha256": "ee96f2bb82503764f249bb8945a1578c2ec9ec094178b4dfc6fa80d7df40dd7d"
+        }
+      ],
+      "parts": [
+        {
+          "file": "blackjack-waveshare175c-0.12.0-app.bin",
+          "sourceOffset": 0,
+          "length": 3402080,
+          "address": 2097152,
+          "kind": "application"
+        }
+      ],
+      "partitions": [
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 36864,
+          "size": 204800,
+          "label": "nvsfactory",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 241664,
+          "size": 860160,
+          "label": "nvs",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 0,
+          "offset": 1101824,
+          "size": 8192,
+          "label": "otadata",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 1,
+          "offset": 1110016,
+          "size": 4096,
+          "label": "phy_init",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 130,
+          "offset": 1114112,
+          "size": 983040,
+          "label": "model",
+          "flags": 0
+        },
+        {
+          "type": 0,
+          "subtype": 0,
+          "offset": 2097152,
+          "size": 6291456,
+          "label": "factory",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 130,
+          "offset": 8388608,
+          "size": 8388608,
+          "label": "storage",
+          "flags": 0
+        }
+      ],
+      "upstream": {
+        "repository": "xberenguer/blackjack-trainer",
+        "tag": "v0.12.0",
+        "commit": "0edd6d2c3f9a81e546739f81fb524c50e4a89448",
+        "releaseId": 452021408,
+        "assets": {
+          "flasher-release.json": {
+            "id": 769547993,
+            "bytes": 4447,
+            "sha256": "fb5b49b79eb68601924b5a64070bde53bfc1e0f6b94d31a16765f4e16e7d810f"
+          },
+          "blackjack-sticks3-app.bin": {
+            "id": 769546594,
+            "bytes": 3354864,
+            "sha256": "a6d178b73858dd75e6cbf023dd4049853bbe375503bc991f323c27150dec5e0f"
+          },
+          "blackjack-sticks3-install.bin": {
+            "id": 769547470,
+            "bytes": 3420400,
+            "sha256": "aea2c0b0db043e43d9ffc7e820b9cd91e23cf76fc08282d591fd891708a71368"
+          },
+          "blackjack-waveshare175c-app.bin": {
+            "id": 769547699,
+            "bytes": 3402080,
+            "sha256": "ee96f2bb82503764f249bb8945a1578c2ec9ec094178b4dfc6fa80d7df40dd7d"
+          },
+          "SHA256SUMS": {
+            "id": 769548051,
+            "bytes": 373,
+            "sha256": "d0143293ebd92ee6585c778e703d5aad81354909985209ef1452eb45f73d96df"
           }
         }
       }
@@ -2383,6 +2508,140 @@
             "id": 761111540,
             "bytes": 1572864,
             "sha256": "acffb4e8b392321bf4767b679ed6a9a6fed95a41777524fa29bf510c92564181"
+          }
+        }
+      }
+    },
+    {
+      "id": "blackjack-sticks3-0.11.3",
+      "project": "blackjack",
+      "device": "sticks3",
+      "version": "0.11.3",
+      "contract": "blackjack-sticks3-v1",
+      "status": "Preview",
+      "description": "Offline blackjack, Hi-Lo practice, drills and session analysis with two-button controls.",
+      "qualification": "Stable firmware release: native CI, source identity, image checksums and exact flash layout verified. The browser StickS3 installation and migration path remains a preview pending physical qualification.",
+      "source": "https://github.com/xberenguer/blackjack-trainer/tree/7cc15317c88776f64d1209b5e604fc16904dc239",
+      "manual": "https://github.com/xberenguer/blackjack-trainer/blob/v0.11.3/docs/INSTALL.md",
+      "files": [
+        {
+          "id": "blackjack-sticks3-0.11.3-app.bin",
+          "url": "firmware/blackjack-sticks3-0.11.3-app.bin",
+          "bytes": 3352832,
+          "sha256": "50d47e4702087dad5fe4ca9510dbaca04a4825e8ea5b06d29f678c2468509335"
+        },
+        {
+          "id": "blackjack-sticks3-0.11.3-install.bin",
+          "url": "firmware/blackjack-sticks3-0.11.3-install.bin",
+          "bytes": 3418368,
+          "sha256": "24bdfb7c5fe276bf02adc0f84d63c524f5cdb39365204bc9e4753bd4a31aa7c7"
+        }
+      ],
+      "parts": [
+        {
+          "file": "blackjack-sticks3-0.11.3-install.bin",
+          "sourceOffset": 0,
+          "length": 32768,
+          "address": 0,
+          "kind": "bootloader"
+        },
+        {
+          "file": "blackjack-sticks3-0.11.3-install.bin",
+          "sourceOffset": 32768,
+          "length": 4096,
+          "address": 32768,
+          "kind": "partitions"
+        },
+        {
+          "file": "blackjack-sticks3-0.11.3-install.bin",
+          "sourceOffset": 57344,
+          "length": 8192,
+          "address": 57344,
+          "kind": "ota"
+        },
+        {
+          "file": "blackjack-sticks3-0.11.3-app.bin",
+          "sourceOffset": 0,
+          "length": 3352832,
+          "address": 65536,
+          "kind": "application"
+        }
+      ],
+      "partitions": [
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 36864,
+          "size": 20480,
+          "label": "nvs",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 0,
+          "offset": 57344,
+          "size": 8192,
+          "label": "otadata",
+          "flags": 0
+        },
+        {
+          "type": 0,
+          "subtype": 16,
+          "offset": 65536,
+          "size": 6291456,
+          "label": "app0",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 130,
+          "offset": 6356992,
+          "size": 1441792,
+          "label": "reserved",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 65,
+          "offset": 7798784,
+          "size": 524288,
+          "label": "rustresume",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 64,
+          "offset": 8323072,
+          "size": 8192,
+          "label": "rustsave",
+          "flags": 0
+        }
+      ],
+      "upstream": {
+        "repository": "xberenguer/blackjack-trainer",
+        "tag": "v0.11.3",
+        "commit": "7cc15317c88776f64d1209b5e604fc16904dc239",
+        "releaseId": 451023308,
+        "assets": {
+          "flasher-release.json": {
+            "id": 766758411,
+            "bytes": 2613,
+            "sha256": "0576c7150a9125af16aad03856506b8d1d1e1307146eb9cc9fc737372bcbc57a"
+          },
+          "blackjack-sticks3-app.bin": {
+            "id": 766758283,
+            "bytes": 3352832,
+            "sha256": "50d47e4702087dad5fe4ca9510dbaca04a4825e8ea5b06d29f678c2468509335"
+          },
+          "blackjack-sticks3-install.bin": {
+            "id": 766758351,
+            "bytes": 3418368,
+            "sha256": "24bdfb7c5fe276bf02adc0f84d63c524f5cdb39365204bc9e4753bd4a31aa7c7"
+          },
+          "SHA256SUMS": {
+            "id": 766758448,
+            "bytes": 275,
+            "sha256": "67a29dbe99caf38a5b34bdc32289992b3a09e1f3c28486fc26467a8b2baf0197"
           }
         }
       }
