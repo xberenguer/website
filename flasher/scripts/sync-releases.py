@@ -280,6 +280,17 @@ def apply_entries(catalog, entries):
             result['projects'].append(copy.deepcopy(BJ.PROJECT))
             result['releases'].append(copy.deepcopy(new))
             continue
+        if not slots and new['project'] == 'blackjack' and new['device'] == 'waveshare175c':
+            # A second device is introduced only by a complete, validated release.
+            # The adapter orders the Stick row first, so bootstrap/promotion is atomic.
+            peers=[r for r in result['releases'] if r['project']=='blackjack' and r['device']=='sticks3']
+            need(len(peers)==1 and peers[0]['version']==new['version'] and
+                 peers[0].get('upstream',{}).get('releaseId')==new.get('upstream',{}).get('releaseId') and
+                 peers[0].get('upstream',{}).get('commit')==new.get('upstream',{}).get('commit') and
+                 sum(p['id']=='blackjack' for p in result['projects'])==1,
+                 'Waveshare Blackjack requires the matching Stick release')
+            result['releases'].append(copy.deepcopy(new))
+            continue
         need(len(slots) == 1, 'Expected exactly one existing project/device release')
         i,old=slots[0]; nv=version(new['version'],new['device']); ov=version(old['version'],old['device'])
         need(nv >= ov, 'Refusing firmware downgrade')
@@ -378,7 +389,7 @@ def sync(root, config, provider, node):
             commit=source_commit(provider,repo,tag)
             successful_checks(provider,repo,commit,c.get('requiredChecks',[]))
             old={r['device']:r for r in updated['releases'] if r['project'] == project}
-            need(set(old) == set(c['devices']) or (project == 'blackjack' and not old),'Configured devices differ from catalog')
+            need(set(old) == set(c['devices']) or (project == 'blackjack' and set(old).issubset(c['devices'])),'Configured devices differ from catalog')
             entries,data=adapter_releases(c,meta,commit,provider,old)
             proposed=apply_entries(updated,entries)
             validate_files(root,proposed,{**blobs,**data},node)

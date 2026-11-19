@@ -74,3 +74,10 @@ The signed catalog binds hashes, offsets, device maps and versions. It does not 
 - Native tests exercise bounded fast-path reads, preservation, mutation rejection, rejected export without captured bytes, honest failure without invented rollback, metadata/layout classification and optional-backup Blackjack journal migration.
 - Isolated Chrome exercises all five device/project offerings through Connect → Flash → Verify without a save or backup prompt; the mock records under 64 KiB of USB reads per routine installation. Advanced capture/save, rollback, local-file restore with a damaged table, fast-write failure, replacement/unknown offers, separate final verification, logs and mobile rendering are exercised separately.
 - These results use simulated USB; no new physical write or hardware qualification is claimed. Application metadata is advisory for backup offers, not a security identity check.
+
+## Blackjack round target — November 19, 2026
+
+- The new round contract accepts one 32 MiB ESP32-S3 application at `0x200000`, with a `0x570000` maximum that excludes both session journals. It accepts the exact seven-entry factory map and refuses partition-table, NVS, filesystem and private-tail payloads.
+- Round installer regressions cover the default no-backup path, preserved final-sector tails and factory data, no private-journal reads, application-only optional recovery, and rejected forged journal authority. Existing Stick migration and generic-project recovery tests remain enabled.
+- The release adapter requires both targets from 0.12.0 onward and promotes them atomically; old 0.11.x releases and archived Stick recovery contracts remain valid. Subsequent upgrades retain both device offerings.
+- Actual Chrome uses a synthetic catalog signed by an ephemeral test key, offers Blackjack for both devices, checks model confirmation and app-only filenames, and cancels a fake USB chooser on each device. No physical USB installation or restore write is claimed by this browser test.

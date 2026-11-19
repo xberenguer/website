@@ -80,6 +80,12 @@ class Provider:
                 names=['blackjack-sticks3-app.bin','blackjack-sticks3-install.bin'];assets=dict(zip(names,[app,bytes(merged)]))
                 fs=[dict(id=n,url=n,bytes=len(assets[n]),sha256=S.sha(assets[n])) for n in names]
                 rows=[dict(device='sticks3',version=ver,contract=S.BJ.CONTRACT,files=fs,parts=S.BJ.parts(*names,len(app)),partitions=S.BJ.PARTITIONS)]
+                if S.version(ver)[:3]>=(0,12,0):
+                    wave=bytearray((ROOT/r['files'][0]['url']).read_bytes());wave[48:80]=ver.encode().ljust(32,b'\0');repair_image(wave,0)
+                    name='blackjack-waveshare175c-app.bin';assets[name]=bytes(wave)
+                    rows.append(dict(device='waveshare175c',version=ver,contract=S.BJ.WAVESHARE_CONTRACT,
+                      files=[dict(id=name,url=name,bytes=len(wave),sha256=S.sha(wave))],
+                      parts=S.BJ.waveshare_parts(name,len(wave)),partitions=S.BJ.WAVESHARE_PARTITIONS))
                 assets['flasher-release.json']=S.encoded(dict(schemaVersion=1,project=project,repository=repo,tag=tag,commit=COMMIT,releases=rows))
                 assets['SHA256SUMS']=''.join(S.sha(b)+'  '+n+'\n' for n,b in assets.items()).encode()
             else:
@@ -374,6 +380,98 @@ class BlackjackAdapterTests(unittest.TestCase):
         existing=json.loads((ROOT/'catalog.json').read_bytes())
         self.assertEqual([r for r in c['releases'] if r['project']=='blackjack'],[r for r in existing['releases'] if r['project']=='blackjack'])
         self.assertEqual([p for p in c['projects'] if p['id']=='blackjack'],[p for p in existing['projects'] if p['id']=='blackjack'])
+
+
+class BlackjackRoundAdapterTests(unittest.TestCase):
+    setUpClass = classmethod(BlackjackAdapterTests.setUpClass.__func__)
+    setUp = BlackjackAdapterTests.setUp
+    adapt = BlackjackAdapterTests.adapt
+    # Keep legacy one-device tests above unchanged; this fixture upgrades the
+    # same source-bound release to the complete two-device0.12.0 contract.
+    def round_fixture(self):
+        data={a['name']:self.provider.data[a['browser_download_url']] for a in self.meta['assets']}
+        m=json.loads(data['flasher-release.json']);old=m['releases'][0]['version'];ver='0.12.0'
+        app=bytearray(data['blackjack-sticks3-app.bin']);app[48:80]=ver.encode().ljust(32,b'\0');repair_image(app,0)
+        data['blackjack-sticks3-app.bin']=bytes(app)
+        merged=bytearray(data['blackjack-sticks3-install.bin']);merged[0x10000:]=app;data['blackjack-sticks3-install.bin']=bytes(merged)
+        r=next(r for r in self.catalog['releases'] if r['project']=='stopwatch')
+        wave=bytearray((ROOT/r['files'][0]['url']).read_bytes());wave[48:80]=ver.encode().ljust(32,b'\0');repair_image(wave,0)
+        name='blackjack-waveshare175c-app.bin';data[name]=bytes(wave)
+        m['tag']='v'+ver;m['releases'][0]['version']=ver
+        m['releases'].append(dict(device='waveshare175c',version=ver,contract=S.BJ.WAVESHARE_CONTRACT,
+          files=[dict(id=name,url=name,bytes=len(wave),sha256=S.sha(wave))],
+          parts=S.BJ.waveshare_parts(name,len(wave)),partitions=copy.deepcopy(S.BJ.WAVESHARE_PARTITIONS)))
+        self.meta['tag_name']='v'+ver;self.meta['html_url']='https://github.com/'+S.REPOSITORIES['blackjack']+'/releases/tag/v'+ver
+        self.write_round(m,data)
+
+    def write_round(self,m,data):
+        for row in m['releases']:
+            for f in row['files']:
+                if f['id'] in data:f.update(bytes=len(data[f['id']]),sha256=S.sha(data[f['id']]))
+        data['flasher-release.json']=S.encoded(m)
+        data['SHA256SUMS']=''.join(S.sha(b)+'  '+n+'\n' for n,b in data.items() if n!='SHA256SUMS').encode()
+        self.meta['assets']=[]
+        for i,(name,b) in enumerate(data.items()):
+            url='https://github.com/'+S.REPOSITORIES['blackjack']+'/releases/download/'+self.meta['tag_name']+'/'+name
+            self.meta['assets'].append(dict(id=3000+i,name=name,size=len(b),digest='sha256:'+S.sha(b),browser_download_url=url));self.provider.data[url]=b
+
+    def mutate_round(self,fn):
+        data={a['name']:self.provider.data[a['browser_download_url']]for a in self.meta['assets']}
+        m=json.loads(data['flasher-release.json']);fn(m,data);self.write_round(m,data)
+
+    def test_complete_round_release_bootstraps_both_targets_atomically(self):
+        self.round_fixture();entries,blobs=self.adapt()
+        self.assertEqual([e['device']for e in entries],['sticks3','waveshare175c']);self.assertEqual(len(blobs),3)
+        wave=entries[1];self.assertEqual(wave['contract'],S.BJ.WAVESHARE_CONTRACT)
+        self.assertEqual(wave['parts'],S.BJ.waveshare_parts(wave['files'][0]['id'],wave['files'][0]['bytes']))
+        self.assertEqual(wave['partitions'],S.BJ.WAVESHARE_PARTITIONS)
+        c=S.apply_entries(self.catalog,entries);self.assertEqual(sum(p['id']=='blackjack'for p in c['projects']),1)
+        self.assertEqual(len([r for r in c['releases']if r['project']=='blackjack']),2)
+        S.validate_files(ROOT,c,blobs,NODE)
+        self.assertEqual(S.apply_entries(c,entries),c)
+
+    def test_round_target_addition_preserves_existing_stick_contract(self):
+        first,_=self.adapt();existing=S.apply_entries(self.catalog,first)
+        self.round_fixture();entries,_=self.adapt();c=S.apply_entries(existing,entries)
+        self.assertIn(first[0],c['recoveryReleases'])
+        self.assertEqual([r['version']for r in c['releases']if r['project']=='blackjack'],['0.12.0','0.12.0'])
+        with self.assertRaisesRegex(S.Invalid,'matching Stick'):
+            S.apply_entries(existing,[entries[1]])
+
+    def test_future_round_updates_keep_both_offerings_and_archive_both_previous_contracts(self):
+        self.round_fixture();first,_=self.adapt();current=S.apply_entries(self.catalog,first)
+        provider=Provider(current,self.config);meta=provider.meta[S.REPOSITORIES['blackjack']]
+        entries,_=S.BJ.releases(S,self.c,meta,COMMIT,provider)
+        self.assertEqual([r['version'] for r in entries],['0.12.1','0.12.1'])
+        updated=S.apply_entries(current,entries)
+        self.assertEqual(len(updated['releases']),len(current['releases']))
+        self.assertTrue(all(r in updated['recoveryReleases'] for r in first))
+
+    def test_new_round_version_requires_both_devices_in_canonical_order(self):
+        for change in [lambda m,d:m['releases'].pop(),lambda m,d:m['releases'].reverse(),lambda m,d:m['releases'].append(m['releases'][1])]:
+            self.setUp();self.round_fixture();self.mutate_round(change)
+            with self.assertRaisesRegex(S.Invalid,'complete ordered device set'):self.adapt()
+
+    def test_round_refuses_private_tail_or_factory_data_payloads(self):
+        mutations=[
+          lambda m,d:m['releases'][1]['parts'][0].update(address=0x770000),
+          lambda m,d:m['releases'][1]['parts'].append(dict(file='blackjack-waveshare175c-app.bin',sourceOffset=0,length=4096,address=0x7f0000,kind='application')),
+          lambda m,d:m['releases'][1]['partitions'][1].update(size=4096),
+          lambda m,d:d.__setitem__('blackjack-waveshare175c-app.bin',d['blackjack-waveshare175c-app.bin']+b'X'*(S.BJ.WAVESHARE_MAX_APP+1))]
+        for change in mutations:
+            self.setUp();self.round_fixture();self.mutate_round(change)
+            with self.assertRaises(S.Invalid):self.adapt()
+
+    def test_round_wrong_capacity_or_embedded_version_is_rejected(self):
+        for kind in ['capacity','version']:
+            self.setUp();self.round_fixture()
+            def change(m,d):
+                b=bytearray(d['blackjack-waveshare175c-app.bin'])
+                if kind=='capacity':b[3]=3<<4
+                else:b[48:80]=b'0.11.3'.ljust(32,b'\0')
+                repair_image(b,0);d['blackjack-waveshare175c-app.bin']=bytes(b)
+            self.mutate_round(change)
+            with self.assertRaises(S.Invalid):self.adapt()
 
 
 if __name__ == '__main__': unittest.main()

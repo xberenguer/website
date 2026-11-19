@@ -123,6 +123,8 @@ The old Phoenix-specific scripts remain for verifying historical bundles, but th
 
 ## Blackjack Trainer
 
-The dedicated [Blackjack flash contract](BLACKJACK.md) adds the StickS3 trainer through the same signed, stable-release pipeline. Its card appears after the first complete release passes validation; no placeholder firmware is offered. Compatible Blackjack layouts receive an app-only update, preserving NVS and both journals. A layout migration initializes only newly claimed, precisely typed journal regions and offers an optional recovery backup. Keep the resulting recovery file private: it may contain prior session data.
+The dedicated [Blackjack flash contract](BLACKJACK.md) adds the StickS3 and Waveshare round trainers through the same signed, stable-release pipeline. From 0.12.0, both targets must validate before publication. Its card appears after the first complete release passes validation; no placeholder firmware is offered. Compatible Blackjack layouts receive an app-only update, preserving NVS and both journals. A layout migration initializes only newly claimed, precisely typed journal regions and offers an optional recovery backup. Keep the resulting recovery file private: it may contain prior session data.
+
+The round target uses its existing 32 MiB factory map and application-only writes, with no installer authority over its private session tail.
 
 The Blackjack browser installation/migration path is **Preview** pending physical browser qualification. Native tests and device validation of the firmware do not qualify the browser transport. Automatic discovery uses the existing scheduled workflow; a failed release check retains the last signed offering.

@@ -1,5 +1,5 @@
 import { observe, hexAddress } from './events.js';
-import { validateBlackjack, isBlackjack, blackjackInitializations, recoveryAuthority } from './blackjack.js';
+import { validateBlackjack, isBlackjack, isBlackjackStick, blackjackInitializations, recoveryAuthority } from './blackjack.js';
 import { readFlashFramed } from './flash-read.js';
 import { md5 } from './vendor/noble/legacy.js';
 import { bytesToHex } from './vendor/noble/utils.js';
@@ -79,7 +79,7 @@ export function validateParts(release, device, files) {
   });
   const sorted = [...parts].sort((a,b) => a.address - b.address);
   requireThat(sorted.every((p,i) => !i || p.address >= sorted[i-1].address + roundUp(sorted[i-1].length)), 'Firmware slices overlap.');
-  if (isBlackjack(release)) requireThat(samePartitions(parsePartitions(parts.find(p => p.kind === 'partitions').data,device.flashBytes),release.partitions), 'Blackjack binary partition table differs.');
+  if (isBlackjackStick(release)) requireThat(samePartitions(parsePartitions(parts.find(p => p.kind === 'partitions').data,device.flashBytes),release.partitions), 'Blackjack binary partition table differs.');
   if (device.id === 'waveshare175c') requireThat(parts.length === 1 && parts[0].address === 0x200000 && parts[0].kind === 'application', 'Waveshare requires an application-only image.');
   return parts;
 }
@@ -148,7 +148,7 @@ export async function inspectInstallation(loader, release, device, catalog, list
       const raw=header.subarray(80,112);const end=raw.indexOf(0);const name=raw.subarray(0,end<0?raw.length:end);
       if(name.every(b=>b>=32&&b<=126)){
         const projectName=decoder.decode(name);
-        if(projectName==='stardust-sticks3')currentProject='blackjack';
+        if(['stardust-sticks3','stardust-waveshare175c'].includes(projectName))currentProject='blackjack';
         else if(projectName==='stopwatch-firmware')currentProject='stopwatch';
         else if(projectName==='arduino-lib-builder'){
           const candidates=new Set(catalog.releases.filter(r=>r.device===device.id&&['seeder','phoenix'].includes(r.project)&&samePartitions(rows,r.partitions)).map(r=>r.project));
@@ -205,7 +205,7 @@ export async function prepare(loader, release, device, identity, files, progress
     ranges.push({address:part.address,before,after,...(before?{sha256:await sha256(before)}:{}),md5,kind:part.kind});
   }
   const plan = { identity: { ...identity }, release: release.id, device: device.id, tableSha256: await sha256(table), replacingMap: !matchingMap, backupCaptured:captureBackup, ranges };
-  recoveryAuthorities.set(plan, isBlackjack(release) ? recoveryAuthority(release,device) : []);
+  recoveryAuthorities.set(plan, recoveryAuthority(release,device));
   observe(listener,{type:'log',source:captureBackup?'BACKUP':'CHECK',level:'success',message:captureBackup?`${ranges.length} changed ranges backed up and verified · ${backupBytes} bytes. No flash written.`:`${ranges.length} changed ranges checked. Recovery backup skipped; no flash written.`});
   return plan;
 }
@@ -236,7 +236,7 @@ export async function decodeBackup(bytes, catalog) {
   validateIdentity(manifest.identity, device);
   let at = 12+size; const used = new Set(); const ranges = [];
   for (const r of manifest.ranges) {
-    requireThat(integer(r.address) && integer(r.length) && !used.has(r.address) && authority.some(p => p.address === r.address && p.length === r.length) && (permittedRange(device,r.address,r.length) || (isBlackjack(release) && r.address === 0x7f0000 && r.length === 0x2000)), 'Recovery file requests an unsupported address.');
+    requireThat(integer(r.address) && integer(r.length) && !used.has(r.address) && authority.some(p => p.address === r.address && p.length === r.length) && (permittedRange(device,r.address,r.length) || (isBlackjackStick(release) && r.address === 0x7f0000 && r.length === 0x2000)), 'Recovery file requests an unsupported address.');
     used.add(r.address);
     requireThat(at+r.length <= bytes.length, 'Truncated recovery data.');
     const before = bytes.slice(at,at+r.length); at += r.length;
@@ -245,7 +245,7 @@ export async function decodeBackup(bytes, catalog) {
   }
   requireThat(at === bytes.length, 'Unexpected recovery data.');
   const plan = { ...manifest, ranges };
-  recoveryAuthorities.set(plan,isBlackjack(release) ? authority : []);
+  recoveryAuthorities.set(plan,authority);
   return plan;
 }
 
@@ -296,7 +296,7 @@ export async function installTransaction(loader, plan, identify, progress = () =
 export async function restoreTransaction(loader, plan, device, identify, progress = () => {}, listener = () => {}) {
   validateIdentity(plan.identity,device);
   checkSameDevice(await identify(),plan.identity);
-  requireThat(plan.ranges.length > 0 && plan.ranges.every(r => (permittedRange(device,r.address,r.before.length) || (device.id === 'sticks3' && recoveryAuthorities.get(plan)?.some(p => p.address === r.address && p.length === r.before.length) && r.address === 0x7f0000 && r.before.length === 0x2000)) && md5Hex(r.before) === r.md5), 'Invalid recovery ranges.');
+  requireThat(plan.ranges.length > 0 && plan.ranges.every(r => recoveryAuthorities.get(plan)?.some(p => p.address === r.address && p.length === r.before.length) && (permittedRange(device,r.address,r.before.length) || (device.id === 'sticks3' && recoveryAuthorities.get(plan)?.some(p => p.address === r.address && p.length === r.before.length) && r.address === 0x7f0000 && r.before.length === 0x2000)) && md5Hex(r.before) === r.md5), 'Invalid recovery ranges.');
   observe(listener,{type:'log',source:'CHECK',level:'success',message:'Recovery identity, range authority and backup checksums accepted.'});
   // The live table may have been interrupted mid-write; never require it to parse here.
   await writeRanges(loader,plan.ranges,'before',progress,listener,'restore');

@@ -26,7 +26,10 @@ def main():
     S.need(args.node is not None,'Node 22+ required (--node path)')
     directory=args.release_dir.resolve();root=HERE.parent;repo=S.REPOSITORIES['blackjack']
     assets={}
-    for name,limit in [('flasher-release.json',1048576),('blackjack-sticks3-app.bin',0x600000),('blackjack-sticks3-install.bin',0x610000),('SHA256SUMS',65536)]:
+    required=[('flasher-release.json',1048576),('blackjack-sticks3-app.bin',0x600000),('blackjack-sticks3-install.bin',0x610000),('SHA256SUMS',65536)]
+    if tuple(map(int,args.tag[1:].split('.'))) >= (0,12,0):
+        required.append(('blackjack-waveshare175c-app.bin',S.BJ.WAVESHARE_MAX_APP))
+    for name,limit in required:
         file=directory/name
         S.need(file.is_file() and not file.is_symlink() and 0 < file.stat().st_size <= limit,'Missing, symlinked or oversized release asset: '+name)
         assets[name]=file.read_bytes()
@@ -44,7 +47,7 @@ def main():
     raw=(root/'catalog.json').read_bytes();S.signature(root,raw,(root/'catalog.sig').read_bytes())
     catalog=S.apply_entries(S.strict_json(raw),entries)
     S.validate_files(root,catalog,blobs,args.node)
-    print(json.dumps(dict(status='LOCAL_CONTRACT_VALID',tag=args.tag,commit=args.commit,files=entries[0]['files'],
+    print(json.dumps(dict(status='LOCAL_CONTRACT_VALID',tag=args.tag,commit=args.commit,devices={e['device']:e['files'] for e in entries},
       caveat='Offline assets/browser-contract check only; GitHub tag/native CI and physical browser installation are separate.'),indent=2))
 
 
