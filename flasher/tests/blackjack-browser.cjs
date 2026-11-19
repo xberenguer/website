@@ -10,6 +10,10 @@ const {chromium}=require('playwright');
  const root=path.resolve(__dirname,'../..');
  const {BLACKJACK_PARTITIONS,blackjackParts}=await import('../blackjack.js');
  const catalog=JSON.parse(await fs.readFile(path.join(root,'flasher/catalog.json')));
+ // Replace any real/archived Blackjack offering with this synthetic UI fixture.
+ catalog.projects=catalog.projects.filter(p=>p.id!=='blackjack');
+ catalog.releases=catalog.releases.filter(r=>r.project!=='blackjack');
+ catalog.recoveryReleases=(catalog.recoveryReleases||[]).filter(r=>r.project!=='blackjack');
  const version='99.0.0',app=`blackjack-sticks3-${version}-app.bin`,install=`blackjack-sticks3-${version}-install.bin`;
  const release={id:`blackjack-sticks3-${version}`,project:'blackjack',device:'sticks3',version,contract:'blackjack-sticks3-v1',status:'Preview',description:'Synthetic offline UI fixture',qualification:'Synthetic fixture only. Browser StickS3 installation/migration requires physical qualification.',source:'https://github.com/xberenguer/blackjack-trainer',manual:'https://github.com/xberenguer/blackjack-trainer/blob/main/docs/INSTALL.md',files:[app,install].map((id,i)=>({id,url:'firmware/'+id,bytes:512+(i?65536:0),sha256:'0'.repeat(64)})),parts:blackjackParts(app,install,512),partitions:BLACKJACK_PARTITIONS};
  catalog.projects.push({id:'blackjack',name:'Blackjack Trainer',category:'Training',url:'https://github.com/xberenguer/blackjack-trainer'});catalog.releases.push(release);

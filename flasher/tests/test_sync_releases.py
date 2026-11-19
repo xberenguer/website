@@ -62,7 +62,10 @@ class Provider:
                 assets[S.P.ASSETS]=(ROOT/r['files'][1]['url']).read_bytes()
                 assets[S.P.SUMS]=(''.join(S.sha(b)+'  '+name+'\n' for name,b in assets.items())).encode()
             elif project=='blackjack':
-                tag='v0.11.3';ver=tag[1:]
+                ver='0.11.3'
+                if old:
+                    n=list(S.version(old[0]['version'])[:3]);n[-1]+=1;ver='.'.join(map(str,n))
+                tag='v'+ver
                 r=next(r for r in catalog['releases'] if r['project']=='stopwatch')
                 app=bytearray((ROOT/r['files'][0]['url']).read_bytes());app[3]=(3<<4)|(app[3]&15)
                 app[48:80]=ver.encode().ljust(32,b'\0');repair_image(app,0);app=bytes(app)
@@ -131,7 +134,7 @@ class SyncTests(unittest.TestCase):
         self.assertTrue(all(s['state']=='current' for s in status['projects']))
         for old in self.catalog['releases']:
             self.assertIn(old,c['recoveryReleases'])
-        self.assertEqual(len(c['releases']),len(self.catalog['releases'])+1)
+        self.assertEqual(len(c['releases']),len(self.catalog['releases'])+(0 if any(r['project']=='blackjack' for r in self.catalog['releases']) else 1))
         self.assertGreaterEqual(len(blobs),5)
         S.validate_files(ROOT,c,blobs,NODE)
 
@@ -272,6 +275,10 @@ class BlackjackAdapterTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.catalog=json.loads((ROOT/'catalog.json').read_bytes())
+        # Explicit bootstrap tests use a catalog without any real Blackjack slot.
+        cls.catalog['projects']=[p for p in cls.catalog['projects'] if p['id']!='blackjack']
+        for key in ('releases','recoveryReleases'):
+            cls.catalog[key]=[r for r in cls.catalog.get(key,[]) if r['project']!='blackjack']
         cls.config=json.loads((ROOT/'releases.config.json').read_bytes())
         cls.c=next(c for c in cls.config['projects'] if c['project']=='blackjack')
 
@@ -305,6 +312,17 @@ class BlackjackAdapterTests(unittest.TestCase):
         self.assertEqual(next(p for p in c['projects'] if p['id']=='blackjack'),S.BJ.PROJECT)
         self.assertEqual(len(c['releases']),len(self.catalog['releases'])+1)
         self.assertEqual(S.apply_entries(c,entries),c)
+
+    def test_existing_blackjack_uses_next_patch_and_archives_previous_contract(self):
+        first,_=self.adapt();initial=S.apply_entries(self.catalog,first)
+        provider=Provider(initial,self.config)
+        meta=provider.meta[S.REPOSITORIES['blackjack']]
+        entries,_=S.BJ.releases(S,self.c,meta,COMMIT,provider)
+        self.assertEqual(entries[0]['version'],'0.11.4')
+        updated=S.apply_entries(initial,entries)
+        self.assertEqual(len(updated['releases']),len(initial['releases']))
+        self.assertIn(first[0],updated['recoveryReleases'])
+        self.assertEqual(sum(p['id']=='blackjack' for p in updated['projects']),1)
 
     def test_binary_alias_and_unqualified_boot_are_rejected(self):
         for mutation,message in [
@@ -353,8 +371,9 @@ class BlackjackAdapterTests(unittest.TestCase):
         c,_,status=S.sync(ROOT,self.config,self.provider,NODE)
         row=next(r for r in status['projects'] if r['project']=='blackjack')
         self.assertEqual(row['state'],'blocked');self.assertIn('native',row['message'])
-        self.assertFalse(any(r['project']=='blackjack' for r in c['releases']))
-        self.assertFalse(any(p['id']=='blackjack' for p in c['projects']))
+        existing=json.loads((ROOT/'catalog.json').read_bytes())
+        self.assertEqual([r for r in c['releases'] if r['project']=='blackjack'],[r for r in existing['releases'] if r['project']=='blackjack'])
+        self.assertEqual([p for p in c['projects'] if p['id']=='blackjack'],[p for p in existing['projects'] if p['id']=='blackjack'])
 
 
 if __name__ == '__main__': unittest.main()

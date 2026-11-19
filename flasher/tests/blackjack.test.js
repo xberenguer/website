@@ -5,6 +5,10 @@ import {BLACKJACK_PARTITIONS as rows,blackjackParts,BLACKJACK_CONTRACT} from '..
 import {validateCatalog} from '../release-status.js';
 import {md5Hex,sha256,roundUp,validateParts,prepare,encodeBackup,decodeBackup,installTransaction,restoreTransaction,permittedRange} from '../core.js';
 const base=JSON.parse(await readFile(new URL('../catalog.json',import.meta.url)));
+// The fixture must remain isolated after a real Blackjack release is offered.
+base.projects=base.projects.filter(p=>p.id!=='blackjack');
+base.releases=base.releases.filter(r=>r.project!=='blackjack');
+base.recoveryReleases=(base.recoveryReleases||[]).filter(r=>r.project!=='blackjack');
 const d=base.devices.find(d=>d.id==='sticks3');
 const identity={chip:'ESP32-S3',imageChipId:9,capacity:0x800000,mac:'12:34:56:78:9a:bc'};
 const hex=s=>Uint8Array.from(s.match(/../g).map(x=>parseInt(x,16)));
