@@ -404,3 +404,11 @@ SOFTWARE.
 dr_mp3 by David Reid
 ====================
 
+
+
+Interface reference
+===================
+Bitronics Web Flasher: https://github.com/BitMaker-hub/bitronics-web-flasher
+Reviewed revision: 304fc501cdc5aa488ec042e0492bcf8b05cdcb9d (GPL-3.0).
+Its console/progress presentation informed this independently written shared
+activity UI. No Bitronics source, assets or runtime dependencies are bundled.

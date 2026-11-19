@@ -36,7 +36,7 @@ class ConsumerTests(unittest.TestCase):
    (cls.codes/name).write_text(s)
   spec=importlib.util.spec_from_file_location('consumer165test',cls.codes/'consume-phoenix.py');cls.C=importlib.util.module_from_spec(spec);spec.loader.exec_module(cls.C)
   cls.base=cls.tmp/'base';cls.base.mkdir();shutil.copytree(BASE/'firmware',cls.base/'firmware');shutil.copytree(BASE/'vendor/noble',cls.base/'vendor/noble')
-  for name in ['core.js','blackjack.js','flash-read.js','release-status.js','package.json','catalog.json']:shutil.copyfile(BASE/name,cls.base/name)
+  for name in ['core.js','events.js','blackjack.js','flash-read.js','release-status.js','package.json','catalog.json']:shutil.copyfile(BASE/name,cls.base/name)
   s=(BASE/'signing.js').read_text().replace('044b1a970af958277f4a742b0f4544526406ac99e00575d25f5bbf0b17b28a7a',cls.raw).replace('34568ae48435426bb68028eb6f3bb338a2cba5115c906a33ca26c3592c31c5d4',cls.fp)
   (cls.base/'signing.js').write_text(s);shutil.copyfile(cls.pub,cls.base/'release-key.pem')
   cls.sign_file(cls.base/'catalog.json',cls.base/'catalog.sig')
@@ -47,7 +47,7 @@ class ConsumerTests(unittest.TestCase):
   cls.original={cls.C.S.APP:source_files[application].read_bytes(),cls.C.S.ASSETS:source_files[assets].read_bytes()}
   cls.original[cls.C.S.SUMS]=(''.join(H(b)+'  '+n+'\n'for n,b in cls.original.items())).encode()
   cls.original_meta={'draft':False,'prerelease':False,'id':107001,'tag_name':cls.next_tag,'html_url':cls.C.S.WEB+'/releases/tag/'+cls.next_tag,'published_at':'2026-11-15T19:00:00Z','assets':[{'name':n,'id':107010+i,'size':len(b),'digest':'sha256:'+H(b),'browser_download_url':cls.C.S.WEB+'/releases/download/'+cls.next_tag+'/'+n}for i,(n,b)in enumerate(cls.original.items())]}
-  cls.source_pins={str(f):H(f.read_bytes())for f in [BASE/'core.js',BASE/'blackjack.js',BASE/'flash-read.js',BASE/'release-status.js',BASE/'signing.js',BASE/'catalog.json',BASE/'catalog.sig',*source_files.values(),*DRAFT.glob('*'),*(BASE/'vendor/noble').glob('*.js')]if f.is_file()}
+  cls.source_pins={str(f):H(f.read_bytes())for f in [BASE/'core.js',BASE/'events.js',BASE/'blackjack.js',BASE/'flash-read.js',BASE/'release-status.js',BASE/'signing.js',BASE/'catalog.json',BASE/'catalog.sig',*source_files.values(),*DRAFT.glob('*'),*(BASE/'vendor/noble').glob('*.js')]if f.is_file()}
  @classmethod
  def sign_file(cls,source,dest):run(['openssl','pkeyutl','-sign','-inkey',cls.key,'-rawin','-in',source,'-out',dest])
  @classmethod

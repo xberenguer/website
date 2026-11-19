@@ -1,3 +1,4 @@
+import { observe, hexAddress } from './events.js';
 import { validateBlackjack, isBlackjack, blackjackInitializations, recoveryAuthority } from './blackjack.js';
 import { readFlashFramed } from './flash-read.js';
 import { md5 } from './vendor/noble/legacy.js';
@@ -82,26 +83,45 @@ export function validateParts(release, device, files) {
   if (device.id === 'waveshare175c') requireThat(parts.length === 1 && parts[0].address === 0x200000 && parts[0].kind === 'application', 'Waveshare requires an application-only image.');
   return parts;
 }
-export async function fetchFiles(release, fetcher = fetch, notify = () => {}) {
+export async function fetchFiles(release, fetcher = fetch, notify = () => {}, listener = () => {}) {
   const files = new Map();
+  const totalBytes=release.files.reduce((n,f)=>n+f.bytes,0);let completed=0;
   for (const file of release.files) {
     requireThat(/^firmware\/[a-zA-Z0-9._-]+\.bin$/.test(file.url), 'Invalid firmware URL.');
+    requireThat(integer(file.bytes) && file.bytes>0,'Invalid firmware length.');
     notify('Downloading firmware',file.id);
+    observe(listener,{type:'log',source:'DOWNLOAD',message:`GET ${file.url} · ${file.bytes} bytes expected`});
+    const update=done=>observe(listener,{type:'progress',phase:'download',label:'Downloading firmware',id:file.id,done,total:file.bytes,overallDone:completed+done,overallTotal:totalBytes});
+    update(0);
     const response = await fetcher(file.url, { cache: 'no-store', signal: AbortSignal.timeout(60000) });
     requireThat(response.ok, `Could not download ${file.id}.`);
     notify('Reading download',file.id);
-    const data = new Uint8Array(await response.arrayBuffer());
+    let data;
+    if(response.body?.getReader){
+      const reader=response.body.getReader();data=new Uint8Array(file.bytes);let offset=0;
+      try {
+        for(;;){const {done,value}=await reader.read();if(done)break;
+          requireThat(value instanceof Uint8Array && offset+value.length<=file.bytes,`Integrity check failed for ${file.id}: download exceeds signed length. No flash was written.`);
+          data.set(value,offset);offset+=value.length;update(offset);
+        }
+        requireThat(offset===file.bytes,`Integrity check failed for ${file.id}: incomplete download. No flash was written.`);
+      }catch(error){try{await reader.cancel();}catch{}throw error;}finally{reader.releaseLock();}
+    }else{data=new Uint8Array(await response.arrayBuffer());update(data.length);}
     notify('Checking download SHA-256',file.id);
-    requireThat(data.length === file.bytes && await sha256(data) === file.sha256, `Integrity check failed for ${file.id}. No flash was written.`);
-    files.set(file.id, data);
+    observe(listener,{type:'progress',phase:'check',label:'Checking download SHA-256'});
+    const digest=await sha256(data);
+    requireThat(data.length === file.bytes && digest === file.sha256, `Integrity check failed for ${file.id}. No flash was written.`);
+    observe(listener,{type:'log',source:'VERIFY',level:'success',message:`SHA-256 OK · ${file.id} · ${digest}`});
+    files.set(file.id, data);completed+=data.length;
   }
   return files;
 }
 
 // The framed reader owns every cumulative ACK and the trailing stub digest.
 // Verify the complete assembled range once more with the device MD5 command.
-export async function readVerified(loader, address, length, progress = () => {}) {
+export async function readVerified(loader, address, length, progress = () => {}, listener = () => {}) {
   requireThat(loader.IS_STUB === true && integer(length) && length > 0, 'A running flash stub is required.');
+  observe(listener,{type:'log',source:'READ',message:`Reading ${hexAddress(address)} · ${length} bytes`});
   const result = new Uint8Array(length);
   for (let offset = 0; offset < length; offset += 65536) {
     const size = Math.min(65536, length - offset);
@@ -113,15 +133,18 @@ export async function readVerified(loader, address, length, progress = () => {})
     result.set(data, offset); progress((offset + size) / length);
   }
   requireThat((await loader.flashMd5sum(address, length)).toLowerCase() === md5Hex(result), 'Device backup verification failed.');
+  observe(listener,{type:'log',source:'VERIFY',level:'success',message:`Backup MD5 OK · ${hexAddress(address)} · ${length} bytes`});
   return result;
 }
-export async function prepare(loader, release, device, identity, files, progress = () => {}) {
+export async function prepare(loader, release, device, identity, files, progress = () => {}, listener = () => {}) {
   validateIdentity(identity, device);
   let parts = validateParts(release, device, files);
   progress('Reading partition table',0);
-  const table = await readVerified(loader, 0x8000, sector);
+  observe(listener,{type:'progress',phase:'check',label:'Reading partition table'});
+  const table = await readVerified(loader, 0x8000, sector,()=>{},listener);
   const rows = parsePartitions(table, device.flashBytes);
   const matchingMap = samePartitions(rows, release.partitions);
+  observe(listener,{type:'log',source:'CHECK',message:`Partition table checked · ${matchingMap?'matching layout':'layout replacement required'}`});
   if (device.id === 'waveshare175c') requireThat(matchingMap, 'Factory partition map differs. This installer preserves the Waveshare factory layout; use the manual recovery guide.');
   if (isBlackjack(release)) {
     parts = matchingMap ? parts.filter(p => p.kind === 'application') : [...parts,...blackjackInitializations(release,rows)];
@@ -130,18 +153,24 @@ export async function prepare(loader, release, device, identity, files, progress
   const changed = [];
   for (const part of parts) {
     progress('Comparing '+part.kind,0);
-    if ((await loader.flashMd5sum(part.address, part.data.length)).toLowerCase() !== md5Hex(part.data)) changed.push(part);
+    const differs=(await loader.flashMd5sum(part.address, part.data.length)).toLowerCase() !== md5Hex(part.data);
+    if(differs)changed.push(part);
+    observe(listener,{type:'log',source:'CHECK',message:`${part.kind} @ ${hexAddress(part.address)} · ${part.data.length} bytes · ${differs?'update required':'already matches; skipped'}`});
   }
   const ranges = [];
+  const backupBytes=changed.reduce((n,p)=>n+roundUp(p.data.length),0);let backedUp=0;
   for (let i = 0; i < changed.length; i++) {
     const part = changed[i];
     progress(`Backing up ${part.kind}`, i / changed.length);
-    const before = await readVerified(loader, part.address, roundUp(part.data.length), p => progress(`Backing up ${part.kind}`, (i+p)/changed.length));
+    const length=roundUp(part.data.length);
+    const before = await readVerified(loader, part.address, length, p => {progress(`Backing up ${part.kind}`, (i+p)/changed.length);observe(listener,{type:'progress',phase:'backup',label:'Preparing recovery backup',id:`${part.kind} @ ${hexAddress(part.address)}`,done:Math.round(p*length),total:length,overallDone:backedUp+Math.round(p*length),overallTotal:backupBytes});},listener);
+    backedUp+=length;
     const after = before.slice(); after.set(part.data);
     ranges.push({ address: part.address, before, after, sha256: await sha256(before), md5: md5Hex(before), kind: part.kind });
   }
   const plan = { identity: { ...identity }, release: release.id, device: device.id, tableSha256: await sha256(table), replacingMap: !matchingMap, ranges };
   recoveryAuthorities.set(plan, isBlackjack(release) ? recoveryAuthority(release,device) : []);
+  observe(listener,{type:'log',source:'BACKUP',level:'success',message:`${ranges.length} changed ranges backed up and verified · ${backupBytes} bytes. No flash written.`});
   return plan;
 }
 
@@ -183,35 +212,53 @@ export async function decodeBackup(bytes, catalog) {
   return plan;
 }
 
-export async function writeRanges(loader, ranges, field, progress = () => {}) {
+export async function writeRanges(loader, ranges, field, progress = () => {}, listener = () => {}, phase = 'write') {
   requireThat(loader.IS_STUB === true, 'Flash stub is not running.');
+  const totalBytes=ranges.reduce((n,r)=>n+r[field].length,0);const offsets=[];let previous=0;
+  for(const r of ranges){offsets.push(previous);previous+=r[field].length;observe(listener,{type:'log',source:'FLASH',message:`${phase==='rollback'?'Rollback':phase==='restore'?'Restore':'Write'} ${r.kind||'range'} @ ${hexAddress(r.address)} · ${r[field].length} bytes`});}
   await loader.writeFlash({ fileArray: ranges.map(r => ({ address:r.address, data:r[field] })), flashMode:'keep', flashFreq:'keep', flashSize:'keep', eraseAll:false, compress:true, calculateMD5Hash:md5Hex,
-    reportProgress:(i,done,total) => progress((i+done/Math.max(total,1))/ranges.length) });
-  for (const r of ranges) requireThat((await loader.flashMd5sum(r.address,r[field].length)).toLowerCase() === md5Hex(r[field]), 'Final flash verification failed.');
+    reportProgress:(i,done,total) => {
+      const fraction=Math.max(0,Math.min(1,done/Math.max(total,1)));progress((i+fraction)/ranges.length);
+      const r=ranges[i];if(!r)return;
+      observe(listener,{type:'progress',phase,label:phase==='rollback'?'Restoring previous firmware':phase==='restore'?'Restoring recovery backup':'Writing flash · compressed transfer',id:`${r.kind||'range'} @ ${hexAddress(r.address)}`,done,total,overallDone:offsets[i]+fraction*r[field].length,overallTotal:totalBytes});
+    } });
+  let verified=0;
+  for (const r of ranges) {
+    const id=`${r.kind||'range'} @ ${hexAddress(r.address)}`;
+    observe(listener,{type:'progress',phase:'verify',label:phase==='rollback'?'Verifying automatic recovery':phase==='restore'?'Verifying restored flash':'Verifying written flash',id,done:0,total:1,unit:'ranges',overallDone:verified,overallTotal:totalBytes});
+    requireThat((await loader.flashMd5sum(r.address,r[field].length)).toLowerCase() === md5Hex(r[field]), 'Final flash verification failed.');
+    verified+=r[field].length;
+    observe(listener,{type:'log',source:'VERIFY',level:'success',message:`Flash MD5 OK · ${hexAddress(r.address)} · ${r[field].length} bytes`});
+    observe(listener,{type:'progress',phase:'verify',label:phase==='rollback'?'Verifying automatic recovery':phase==='restore'?'Verifying restored flash':'Verifying written flash',id,done:1,total:1,unit:'ranges',overallDone:verified,overallTotal:totalBytes});
+  }
 }
-export async function installTransaction(loader, plan, identify, progress = () => {}) {
+export async function installTransaction(loader, plan, identify, progress = () => {}, listener = () => {}) {
+  observe(listener,{type:'progress',phase:'check',label:'Rechecking device and saved flash before writing'});
   checkSameDevice(await identify(), plan.identity);
   // Detect an unexpected mutation between preparing and writing. No write on failure.
   for (const r of plan.ranges) requireThat((await loader.flashMd5sum(r.address,r.before.length)).toLowerCase() === r.md5, 'Flash changed after backup. Prepare a new installation.');
-  const currentTable = await readVerified(loader,0x8000,sector);
+  const currentTable = await readVerified(loader,0x8000,sector,()=>{},listener);
   requireThat(await sha256(currentTable) === plan.tableSha256, 'Partition table changed after preparation.');
+  observe(listener,{type:'log',source:'CHECK',level:'success',message:'Same device, saved ranges and partition table verified. Starting bounded writes.'});
   try {
-    await writeRanges(loader,plan.ranges,'after',p => progress('Installing',p));
+    await writeRanges(loader,plan.ranges,'after',p => progress('Installing',p),listener);
     return { installed:true };
   } catch (error) {
+    observe(listener,{type:'log',source:'FLASH',level:'error',message:`Install failed: ${error.message}. Attempting automatic recovery.`});
     try {
       checkSameDevice(await identify(),plan.identity);
-      await writeRanges(loader,plan.ranges,'before',p => progress('Restoring previous firmware',p));
+      await writeRanges(loader,plan.ranges,'before',p => progress('Restoring previous firmware',p),listener,'rollback');
       return { installed:false, restored:true, error };
     } catch {
       throw new Error('Installation stopped and automatic recovery could not be verified. Keep the saved recovery file, reconnect in flashing mode and use Restore backup.');
     }
   }
 }
-export async function restoreTransaction(loader, plan, device, identify, progress = () => {}) {
+export async function restoreTransaction(loader, plan, device, identify, progress = () => {}, listener = () => {}) {
   validateIdentity(plan.identity,device);
   checkSameDevice(await identify(),plan.identity);
   requireThat(plan.ranges.length > 0 && plan.ranges.every(r => (permittedRange(device,r.address,r.before.length) || (device.id === 'sticks3' && recoveryAuthorities.get(plan)?.some(p => p.address === r.address && p.length === r.before.length) && r.address === 0x7f0000 && r.before.length === 0x2000)) && md5Hex(r.before) === r.md5), 'Invalid recovery ranges.');
+  observe(listener,{type:'log',source:'CHECK',level:'success',message:'Recovery identity, range authority and backup checksums accepted.'});
   // The live table may have been interrupted mid-write; never require it to parse here.
-  await writeRanges(loader,plan.ranges,'before',progress);
+  await writeRanges(loader,plan.ranges,'before',progress,listener,'restore');
 }

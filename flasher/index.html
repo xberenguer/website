@@ -27,7 +27,36 @@
   <p id="catalog-error" class="notice" role="alert" hidden></p>
 </main>
 <footer><a href="/">← berenguer</a><a href="https://github.com/xberenguer">GitHub ↗</a></footer>
-<dialog id="installer" aria-labelledby="install-title"><div class="dialog-head"><span class="eyebrow">USB INSTALLER</span><button class="close" id="close-dialog" aria-label="Close installer">×</button></div><div class="dialog-body"><h2 id="install-title"></h2><p id="install-subtitle" class="muted"></p><div class="release-info" id="release-info"></div><p id="recovery-guide" class="notice"></p><label class="check"><input id="model-confirm" type="checkbox"><span id="model-label"></span></label><p id="replace-warning" class="muted">Installing replaces the current project and restarts the device. Save any current seed first.</p><div class="status-box" aria-live="polite"><b id="stage">Ready to connect</b><p id="status">Choose the matching USB port when your browser asks.</p><progress id="progress" max="1" value="0" hidden></progress></div><label class="check" id="saved-check" hidden><input id="backup-confirm" type="checkbox"><span>I saved the recovery file on my computer.</span></label><div class="actions"><button class="primary" id="connect">Connect device</button><button class="primary" id="prepare" hidden>Prepare installation</button><button class="primary" id="save" hidden>Save recovery backup</button><button class="primary" id="install" hidden>Install firmware</button><button class="primary" id="restore" hidden>Restore backup</button><button id="finish" hidden>Restart & disconnect</button></div><p class="fine" id="local-message">Nothing is written to flash during connection or preparation. Device identity and backup data stay in this browser.</p></div></dialog>
+<dialog id="installer" aria-labelledby="install-title">
+  <div class="dialog-head"><span class="eyebrow">USB INSTALLER</span><button class="close" id="close-dialog" aria-label="Close installer">×</button></div>
+  <div class="dialog-body">
+    <div class="install-heading"><h2 id="install-title"></h2><p id="install-subtitle" class="muted"></p></div>
+    <ol id="install-steps" class="install-steps" aria-label="Installation steps"></ol>
+    <div class="install-workspace">
+      <div class="install-controls">
+        <div class="release-info" id="release-info"></div>
+        <p id="recovery-guide" class="notice"></p>
+        <label class="check"><input id="model-confirm" type="checkbox"><span id="model-label"></span></label>
+        <p id="replace-warning" class="muted">Installing replaces the current project and restarts the device. Save any current seed first.</p>
+        <div class="status-box" id="status-box" aria-live="polite">
+          <b id="stage">Ready to connect</b><p id="status">Choose the matching USB port when your browser asks.</p>
+          <div class="progress-heading"><span id="progress-label">Waiting for connection</span><strong id="progress-value">Ready</strong></div>
+          <progress id="progress" max="1" value="0" aria-label="Current operation progress"></progress>
+          <div id="transfer-progress" class="transfer-progress"></div>
+        </div>
+        <label class="check" id="saved-check" hidden><input id="backup-confirm" type="checkbox"><span>I saved the recovery file on my computer.</span></label>
+        <div class="actions"><button class="primary" id="connect">Connect device</button><button class="primary" id="prepare" hidden>Prepare installation</button><button class="primary" id="save" hidden>Save recovery backup</button><button class="primary" id="install" hidden>Start flashing</button><button class="primary" id="restore" hidden>Restore backup</button><button id="finish" hidden>Restart & disconnect</button></div>
+        <p class="fine" id="local-message">Nothing is written to flash during connection or preparation. Device identity and backup data stay in this browser.</p>
+      </div>
+      <section class="activity-panel" aria-labelledby="activity-heading">
+        <div class="activity-heading"><div><h3 id="activity-heading">Live console</h3><p>esptool output · downloads · backup · verification</p></div><span id="activity-state" class="activity-state">Ready</span></div>
+        <pre id="activity-log" class="activity-log" tabindex="0" role="log" aria-live="off" aria-label="Installation activity log"></pre>
+        <div class="activity-tools"><span id="activity-elapsed">Elapsed 00:00</span><div><button id="copy-log" type="button">Copy log</button><button id="download-log" type="button">Download log</button></div></div>
+        <p id="log-feedback" class="fine" role="status"></p>
+      </section>
+    </div>
+  </div>
+</dialog>
 <input id="backup-file" type="file" accept=".bflash,application/octet-stream" hidden>
 <script type="module" src="app.js"></script>
 </body></html>

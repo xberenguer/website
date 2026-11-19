@@ -122,3 +122,15 @@ test('Stopwatch installs only its factory application, preserves sector tail and
   await restoreTransaction(loader,recovery,d,async()=>id);
   assert.deepEqual(loader.memory.subarray(0x200000,0x200000+roundUp(bytes.length)),recovery.ranges[0].before);
 });
+
+test('live activity separates compressed transfer from final device verification and reports rollback truthfully',async()=>{
+ const loader=new FakeLoader();const plan=await prepare(loader,release,device,identity,files);const events=[];
+ const write=loader.writeFlash.bind(loader);
+ loader.writeFlash=async options=>{for(let i=0;i<options.fileArray.length;i++){options.reportProgress(i,0,100);options.reportProgress(i,50,100);options.reportProgress(i,100,100);}await write(options);};
+ const result=await installTransaction(loader,plan,async()=>identity,()=>{},e=>events.push(e));assert.equal(result.installed,true);
+ const transfer=events.filter(e=>e.type==='progress'&&e.phase==='write');assert.ok(transfer.some(e=>e.done===50));assert.ok(transfer.every(e=>e.label.includes('compressed')));
+ const firstVerification=events.findIndex(e=>e.type==='progress'&&e.phase==='verify');const lastTransfer=events.findLastIndex(e=>e.type==='progress'&&e.phase==='write');assert.ok(firstVerification>lastTransfer);
+ const final=events.filter(e=>e.type==='progress'&&e.phase==='verify').at(-1);assert.equal(final.overallDone,final.overallTotal);
+ const other=new FakeLoader();const backup=await prepare(other,release,device,identity,files);other.failOnce=true;const recovery=[];assert.equal((await installTransaction(other,backup,async()=>identity,()=>{},e=>recovery.push(e))).restored,true);assert.ok(recovery.some(e=>e.level==='error'));assert.ok(recovery.some(e=>e.type==='progress'&&e.label==='Verifying automatic recovery'));
+ const third=new FakeLoader();const p=await prepare(third,release,device,identity,files,()=>{},()=>{throw Error('UI broke');});assert.equal((await installTransaction(third,p,async()=>identity,()=>{},()=>{throw Error('UI broke');})).installed,true);
+});

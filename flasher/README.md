@@ -29,6 +29,24 @@ Retired/unfinished pocketwatch, StatTrak and roulette builds are excluded. Raspb
 
 Flashing restarts the board. Save any current seed first. Recovery files cover flash sectors, not the seed held in volatile RAM. Private backup bytes and the session device MAC stay local. The server receives normal page/download requests only.
 
+## Live console and progress
+
+Every project uses the same expanded installation panel: **Connect → Prepare → Save backup → Flash & verify**. Release details and exact files remain available in the expandable disclosure.
+
+The console shows real esptool messages plus the operations actually being performed: downloads, SHA-256 checks, partition/range comparison, verified recovery reads, flash writes and final device-side verification. File/range addresses and byte counts are included. Download bars use bytes actually received; write bars use esptool's compressed-transfer callbacks. Final verification has its own stage: transferring 100% does not finish installation. When an install fails, the failure and any verified automatic recovery stay in the log.
+
+**Copy log** and **Download log** export a local text transcript. The display keeps the latest 600 lines, strips terminal control codes and masks device MAC addresses. Scroll/touch the console to inspect earlier lines; scrolling back to the bottom resumes following. This is installation activity, not a serial monitor for a running application; no application output, seed contents or backup payload bytes are logged.
+
+The [Bitronics Web Flasher](https://github.com/BitMaker-hub/bitronics-web-flasher) informed the console/progress presentation. This implementation uses the existing pinned transport and verification flow with its own UI code.
+
+Optional isolated Chrome acceptance (Playwright required):
+
+```sh
+node flasher/tests/activity-browser.cjs
+```
+
+`FLASHER_PLAYWRIGHT_MODULE` and `BROWSER_EXECUTABLE` can select an existing Playwright installation and Chrome. The test uses the real signed catalogue and installer with a simulated USB module, covering all offered project/device combinations, streamed files, save gates, transfer/verification separation, log download, mobile rendering and failed-write rollback. It never opens a physical port. `BROWSER_TEST_OUTPUT` optionally saves clearly labelled synthetic screenshots.
+
 ## Flash contract
 
 - Ed25519 verification of the signed release catalog before showing installation, using a pinned public key. See [release signatures and independent verification](SIGNING.md).

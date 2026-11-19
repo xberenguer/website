@@ -1,3 +1,4 @@
+import { ActivityPanel } from './activity.js';
 import { renderPhoenixNotes } from './phoenix-notes.js';
 import { loadSignedCatalog, RELEASE_KEY_FINGERPRINT } from './signing.js';
 import { fetchReleaseStatus, describeReleaseStatus, pinRelease } from './release-status.js';
@@ -10,9 +11,15 @@ let catalog, releaseStatus, device, release, connection, identity, plan, recover
 let busy = false, mutating = false, saved = false, resetOnClose = true;
 const el = (tag, text, cls) => { const n = document.createElement(tag); if (text !== undefined) n.textContent = text; if (cls) n.className = cls; return n; };
 const link = (text,url) => { const n = el('a',text); n.href = url; if(url.startsWith('#')) n.onclick=async()=>{ if(busy)return false; await disconnectAndClose(); const target=document.querySelector(url); if(target?.tagName==='DETAILS')target.open=true; target?.scrollIntoView(); }; return n; };
-const status = (title,message) => { $('stage').textContent = title; $('status').textContent = message; };
-let lastProgressAt=0;
-function progress(title,value) { const now=performance.now(); const changed=$('stage').textContent!==title; if(changed)status(title,'Keep this tab open and the USB cable connected.'); const bar=$('progress'); if(changed||bar.hidden||value>=1||now-lastProgressAt>=50){bar.value=value;lastProgressAt=now;} bar.hidden=false; }
+const activity = new ActivityPanel();
+const status = (title,message,level='info') => { $('stage').textContent = title; $('status').textContent = message; activity.log.add(title+(message?' — '+message:''),level); };
+const onEvent = event => {
+  activity.event(event);
+  if(event.type==='progress' && $('stage').textContent!==event.label){
+    $('stage').textContent=event.label;
+    $('status').textContent=event.phase==='download'?'Receiving the signed release files.':event.phase==='check'?'Checking the selected firmware and connected device.':'Keep this tab open and the USB cable connected.';
+  }
+};
 function lock(value) {
   busy = value; $('close-dialog').disabled = value; $('model-confirm').disabled = value || !!connection;
   for (const id of ['connect','prepare','save','install','restore','finish']) $(id).disabled = value;
@@ -46,33 +53,40 @@ function openInstaller(r,restore) {
   r=pinRelease(r); release=r; recoveryPlan=restore||null; device=catalog.devices.find(d=>d.id===r.device); plan=null; saved=false; identity=null; resetOnClose=true;
   $('install-title').textContent=restore?'Restore previous firmware':catalog.projects.find(p=>p.id===r.project).name;
   $('install-subtitle').textContent=`${device.name} · ${restore?'Recovery backup':r.version}`;
-  const info=$('release-info'); info.replaceChildren(el('span',r.status,'badge'+(r.status==='Preview'?' preview':'')),el('p',restore?'This restores the saved flash sectors to the same physical device.':r.qualification));
-  if(!restore){const sync=describeReleaseStatus(releaseStatus,r);info.append(el('p',sync.message));if(sync.releaseUrl)info.append(link('GitHub release',sync.releaseUrl),document.createTextNode(' · '));}
-  info.append(link('Project manual',r.manual),document.createTextNode(' · '),link('Source / build notes',r.source));
-  if (!restore) { const details=el('details'); details.append(el('summary','Firmware files & SHA-256')); const list=el('ul'); for(const f of r.files){const item=el('li');item.append(link(f.id,f.url),el('p',`${f.bytes.toLocaleString()} bytes`),el('code',f.sha256));list.append(item);}details.append(list);info.append(details); }
+  const info=$('release-info');
+  info.replaceChildren(el('span',r.status,'badge'+(r.status==='Preview'?' preview':'')),el('p',restore?'Restore your saved sectors to the same device.':r.description));
+  info.append(link('Project manual',r.manual),document.createTextNode(' · '),link('Source',r.source));
+  const details=el('details');details.append(el('summary','Release details & firmware files'),el('p',restore?'This restores the saved flash sectors to the same physical device.':r.qualification));
+  if(!restore){const sync=describeReleaseStatus(releaseStatus,r);details.append(el('p',sync.message));if(sync.releaseUrl)details.append(link('GitHub release',sync.releaseUrl));
+    const list=el('ul');for(const f of r.files){const item=el('li');item.append(link(f.id,f.url),el('p',`${f.bytes.toLocaleString()} bytes`),el('code',f.sha256));list.append(item);}details.append(list);
+  }
+  info.append(details);
   $('recovery-guide').textContent=device.recovery;
   $('model-label').textContent=`My connected device is exactly the ${device.name}${device.id==='waveshare175c'?' (C model)':' / K150'}.`;
-  $('model-confirm').checked=false; $('backup-confirm').checked=false; $('saved-check').hidden=true; $('progress').hidden=true;
+  $('model-confirm').checked=false; $('backup-confirm').checked=false; $('saved-check').hidden=true;
   $('replace-warning').textContent=restore?'Restoring replaces the current firmware with your saved sectors. Use only your own recovery file.':r.project === 'blackjack'?'Installing restarts the device. Compatible Blackjack journals are preserved; replacing another project can overwrite its storage. Save the recovery backup before writing.':'Installing replaces the current project and restarts the device. Save any current seed first.';
+  activity.reset(r,!!restore);
   actions('connect'); status('Ready to connect','Choose the matching USB port when your browser asks.'); lock(false); $('installer').showModal();
 }
 $('model-confirm').onchange=()=>{ if(!busy)$('connect').disabled=!supportsUSB||!$('model-confirm').checked; };
 $('connect').onclick=async()=>{
   if(busy||!$('model-confirm').checked||!supportsUSB)return;
   // requestPort stays directly within the click gesture; no asynchronous fetch comes first.
-  const portPromise=navigator.serial.requestPort(); lock(true); status('Connecting','Select the device USB port. This does not write flash.');
-  try { const port=await portPromise; connection=new DeviceConnection(); identity=await connection.connect(port,device);
+  const portPromise=navigator.serial.requestPort(); lock(true); activity.start('connect','Connecting to device'); status('Connecting','Select the device USB port. This does not write flash.');
+  try { const port=await portPromise; connection=new DeviceConnection(onEvent); identity=await connection.connect(port,device);
     status('Device checked',`${identity.chip} · ${identity.capacity/1048576}MB flash. ${recoveryPlan?'Ready to verify and restore the saved sectors.':'Ready to download firmware and prepare a local recovery backup.'}`);
+    activity.finish(0,'Device connected');
     actions(recoveryPlan?'restore':'prepare','finish');
-  }catch(e){try{await connection?.close();}catch{}connection=null;identity=null;status('Connection not completed',errorMessage(e));actions('connect');}
+  }catch(e){try{await connection?.close();}catch{}connection=null;identity=null;status('Connection not completed',errorMessage(e),'error');activity.fail();actions('connect');}
   finally{lock(false);}
 };
 $('prepare').onclick=async()=>{
-  if(busy||!connection||!identity)return;lock(true);actions();status('Checking firmware','Downloading the pinned release and checking its SHA-256 hashes.');
-  try { const files=await fetchFiles(release,fetch,status); status('Download verified','Checking the connected flash.'); plan=await prepare(connection.loader,release,device,identity,files,progress); $('progress').hidden=true;
+  if(busy||!connection||!identity)return;lock(true);actions();activity.start('download','Downloading firmware');status('Checking firmware','Downloading the pinned release and checking its SHA-256 hashes.');
+  try { const files=await fetchFiles(release,fetch,status,onEvent); status('Download verified','Checking the connected flash.'); plan=await prepare(connection.loader,release,device,identity,files,()=>{},onEvent);
+    activity.finish(1,'Firmware and backup checked');
     if(!plan.ranges.length){status('This version is already installed',`Every selected firmware range matches ${release.version}. No flash was written.`);actions('finish');}
     else {status('Recovery backup prepared',`${plan.ranges.length} changed flash ${plan.ranges.length===1?'range':'ranges'} verified and backed up in this browser. Save the recovery file to enable installation.`);$('replace-warning').textContent=plan.replacingMap && release.project === 'blackjack'?'Blackjack replaces the partition map and application. Existing NVS and exact compatible Blackjack journals are preserved; newly claimed journal regions are backed up and initialized.':plan.replacingMap?'This replaces the current partition layout and application. The NVS region is skipped; saved settings may not transfer between projects.':'The matching device layout is retained. Only changed ranges will be written.';actions('save','finish');}
-  }catch(e){plan=null;try{await connection?.close(true);}catch{}connection=null;identity=null;status('Preparation stopped',errorMessage(e)+' No flash was written. Reconnect before trying again.');$('progress').hidden=true;actions('connect');}
+  }catch(e){plan=null;try{await connection?.close(true);}catch{}connection=null;identity=null;status('Preparation stopped',errorMessage(e)+' No flash was written. Reconnect before trying again.','error');activity.fail();actions('connect');}
   finally{lock(false);}
 };
 $('save').onclick=async()=>{
@@ -80,27 +94,27 @@ $('save').onclick=async()=>{
   const name=`${device.id}-recovery.bflash`;
   // Obtain the save handle during the gesture, before generating the backup bytes.
   const handlePromise=window.showSaveFilePicker?window.showSaveFilePicker({suggestedName:name,types:[{description:'Firmware recovery backup',accept:{'application/octet-stream':['.bflash']}}]}):null;
-  lock(true);
+  lock(true);activity.start('save','Saving recovery backup');
   try{const handle=handlePromise?await handlePromise:null;const bytes=await encodeBackup(plan);
-    if(handle){const writer=await handle.createWritable();await writer.write(bytes);await writer.close();saved=true;status('Backup saved','The recovery file was written to your computer. You can now install.');actions('install','save','finish');}
-    else{const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));const a=link('',url);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);$('saved-check').hidden=false;status('Recovery download requested','Keep the .bflash file, then confirm below that it finished saving.');actions('install','save','finish');}
-  }catch(e){if(e.name!=='AbortError')status('Backup could not be saved',errorMessage(e));}
+    if(handle){const writer=await handle.createWritable();await writer.write(bytes);await writer.close();saved=true;activity.finish(2,'Recovery backup saved');status('Backup saved','The recovery file was written to your computer. You can now install.');actions('install','save','finish');}
+    else{const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));const a=link('',url);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);$('saved-check').hidden=false;activity.finish(1,'Confirm the recovery download');activity.step(2);status('Recovery download requested','Keep the .bflash file, then confirm below that it finished saving.');actions('install','save','finish');}
+  }catch(e){activity.fail();status(e.name==='AbortError'?'Backup save cancelled':'Backup could not be saved',e.name==='AbortError'?'Save the recovery file before installing.':errorMessage(e),'error');}
   finally{lock(false);}
 };
-$('backup-confirm').onchange=()=>{saved=$('backup-confirm').checked;if(!busy)$('install').disabled=!saved;};
+$('backup-confirm').onchange=()=>{saved=$('backup-confirm').checked;if(!busy)$('install').disabled=!saved;if(saved){activity.finish(2,'Recovery download confirmed');status('Backup confirmed','You confirmed the recovery file finished saving.');}else{activity.step(2);activity.log.add('Recovery download confirmation cleared.');}};
 $('install').onclick=async()=>{
-  if(busy||!saved||!plan||!plan.ranges.length)return;lock(true);mutating=true;actions();
-  try{const result=await installTransaction(connection.loader,plan,()=>connection.identify(),progress);$('progress').hidden=true;
-    if(result.installed)status('Installed & verified','All written ranges match. Restart the device, then check its display and buttons.');
-    else status('Previous firmware restored','The install failed; the original sectors were restored and verified. Keep the recovery file.');
+  if(busy||!saved||!plan||!plan.ranges.length)return;lock(true);mutating=true;actions();activity.start('write','Checking device before flashing');
+  try{const result=await installTransaction(connection.loader,plan,()=>connection.identify(),()=>{},onEvent);
+    if(result.installed){activity.finish(3,'Flash written and verified');status('Installed & verified','All written ranges match. Restart the device, then check its display and buttons.','success');}
+    else{activity.fail();status('Previous firmware restored','The install failed; the original sectors were restored and verified. Keep the recovery file.','warning');}
     actions('finish');
-  }catch(e){$('progress').hidden=true;resetOnClose=false;status('Installation stopped',errorMessage(e));actions('finish');}
+  }catch(e){resetOnClose=false;status('Installation stopped',errorMessage(e),'error');activity.fail();actions('finish');}
   finally{mutating=false;lock(false);}
 };
 $('restore').onclick=async()=>{
-  if(busy||!recoveryPlan||!connection)return;lock(true);mutating=true;actions();
-  try{await restoreTransaction(connection.loader,recoveryPlan,device,()=>connection.identify(),p=>progress('Restoring backup',p));$('progress').hidden=true;status('Recovery verified','The saved flash sectors match the connected device. Restart and check its display.');actions('finish');}
-  catch(e){$('progress').hidden=true;resetOnClose=false;status('Recovery not verified',errorMessage(e)+' Keep your recovery file and reconnect in flashing mode.');actions('finish');}
+  if(busy||!recoveryPlan||!connection)return;lock(true);mutating=true;actions();activity.start('restore','Checking recovery backup');
+  try{await restoreTransaction(connection.loader,recoveryPlan,device,()=>connection.identify(),()=>{},onEvent);activity.finish(3,'Recovery written and verified');status('Recovery verified','The saved flash sectors match the connected device. Restart and check its display.','success');actions('finish');}
+  catch(e){resetOnClose=false;status('Recovery not verified',errorMessage(e)+' Keep your recovery file and reconnect in flashing mode.','error');activity.fail();actions('finish');}
   finally{mutating=false;lock(false);}
 };
 async function disconnectAndClose(){if(busy)return;lock(true);try{await connection?.close(resetOnClose);}catch{status('USB disconnected','Reconnect or press reset to restart the device.');}finally{connection=null;identity=null;plan=null;recoveryPlan=null;lock(false);$('installer').close();}}
