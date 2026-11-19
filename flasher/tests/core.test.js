@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { md5Hex,sha256,parsePartitions,samePartitions,validateIdentity,checkSameDevice,permittedRange,validateParts,fetchFiles,readVerified,prepare,encodeBackup,decodeBackup,installTransaction,restoreTransaction,roundUp } from '../core.js';
+import { md5Hex,sha256,parsePartitions,samePartitions,validateIdentity,checkSameDevice,permittedRange,validateParts,fetchFiles,readVerified,inspectInstallation,prepare,encodeBackup,decodeBackup,installTransaction,restoreTransaction,roundUp } from '../core.js';
 const catalog=JSON.parse(await readFile(new URL('../catalog.json',import.meta.url)));
 const encoder=new TextEncoder();
 const device=catalog.devices[0], release=catalog.releases[0];
@@ -133,4 +133,29 @@ test('live activity separates compressed transfer from final device verification
  const final=events.filter(e=>e.type==='progress'&&e.phase==='verify').at(-1);assert.equal(final.overallDone,final.overallTotal);
  const other=new FakeLoader();const backup=await prepare(other,release,device,identity,files);other.failOnce=true;const recovery=[];assert.equal((await installTransaction(other,backup,async()=>identity,()=>{},e=>recovery.push(e))).restored,true);assert.ok(recovery.some(e=>e.level==='error'));assert.ok(recovery.some(e=>e.type==='progress'&&e.label==='Verifying automatic recovery'));
  const third=new FakeLoader();const p=await prepare(third,release,device,identity,files,()=>{},()=>{throw Error('UI broke');});assert.equal((await installTransaction(third,p,async()=>identity,()=>{},()=>{throw Error('UI broke');})).installed,true);
+});
+
+test('optional-backup fast path reads only table/tail sectors, preserves tails and still verifies all writes',async()=>{
+ const loader=new FakeLoader();const before=loader.memory.slice();let read=0;const command=loader.checkCommand.bind(loader);
+ loader.checkCommand=async(...args)=>{read+=new DataView(args[2].buffer,args[2].byteOffset).getUint32(4,true);return command(...args);};
+ const plan=await prepare(loader,release,device,identity,files,()=>{},()=>{},{backup:false});
+ assert.equal(plan.backupCaptured,false);assert.ok(plan.ranges.every(r=>r.before===null));assert.ok(read<=4096*(1+plan.ranges.length));assert.ok(read<plan.ranges.reduce((n,r)=>n+r.after.length,0));
+ await assert.rejects(encodeBackup(plan),/Create a recovery backup/);
+ assert.equal((await installTransaction(loader,plan,async()=>identity)).installed,true);
+ for(const r of plan.ranges){const part=release.parts.find(p=>p.address===r.address);assert.deepEqual(loader.memory.subarray(r.address+part.length,r.address+r.after.length),before.subarray(r.address+part.length,r.address+r.after.length));}
+ assert.deepEqual(loader.memory.subarray(0x9000,0xe000),before.subarray(0x9000,0xe000));
+});
+test('fast path retains mutation guards and never attempts fictional rollback without a backup',async()=>{
+ const loader=new FakeLoader();const plan=await prepare(loader,release,device,identity,files,()=>{},()=>{},{backup:false});loader.memory[plan.ranges[0].address]^=1;
+ await assert.rejects(installTransaction(loader,plan,async()=>identity),/Flash changed after preparation/);assert.equal(loader.writes.length,0);
+ const failing=new FakeLoader();const fast=await prepare(failing,release,device,identity,files,()=>{},()=>{},{backup:false});failing.failOnce=true;const events=[];
+ await assert.rejects(installTransaction(failing,fast,async()=>identity,()=>{},e=>events.push(e)),/without a recovery backup/);assert.equal(failing.writes.length,1);assert.ok(events.some(e=>e.message?.includes('No recovery backup')));assert.equal(events.some(e=>e.phase==='rollback'),false);
+});
+test('backup recommendations distinguish same family, another app, unknown firmware and layout change',async()=>{
+ const loader=new FakeLoader();const address=release.parts.find(p=>p.kind==='application').address;
+ const header=name=>{loader.memory[address]=0xe9;loader.memory.set(fromHex('3254cdab'),address+32);loader.memory.fill(0,address+80,address+112);loader.memory.set(encoder.encode(name),address+80);};
+ header('arduino-lib-builder');const same=await inspectInstallation(loader,release,device,catalog);assert.equal(same.reason,null);assert.equal(same.currentProject,'seeder');
+ header('stopwatch-firmware');assert.equal((await inspectInstallation(loader,release,device,catalog)).reason,'project');
+ header('custom-app');assert.equal((await inspectInstallation(loader,release,device,catalog)).reason,'unknown');
+ const bj=catalog.releases.find(r=>r.project==='blackjack');assert.equal((await inspectInstallation(loader,bj,device,catalog)).reason,'layout');assert.equal(loader.writes.length,0);
 });

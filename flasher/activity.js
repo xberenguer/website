@@ -45,7 +45,7 @@ export class ActivityPanel {
   reset(release,restore=false){
     this.restore=restore;this.follow=true;this.phase=null;this.active=false;this.log.reset();this.rows.clear();this.milestones.clear();this.$('transfer-progress').replaceChildren();this.$('log-feedback').textContent='';this.$('activity-elapsed').textContent='Elapsed 00:00';
     this.filename=`${release.id}-activity.txt`;this.$('progress').value=0;this.$('progress').hidden=false;this.$('progress-value').textContent='Ready';this.$('progress-label').textContent='Waiting for connection';this.$('status-box').dataset.state='ready';this.$('activity-state').textContent='Ready';
-    const names=restore?['Connect','Check backup','Restore','Verify']:['Connect','Prepare','Save backup','Flash & verify'];
+    const names=restore?['Connect','Restore','Verify']:['Connect','Flash','Verify'];
     this.$('install-steps').replaceChildren(...names.map((name,i)=>{const li=this.doc.createElement('li');li.dataset.state=i===0?'current':'waiting';li.textContent=`${i+1}  ${name}`;if(i===0)li.setAttribute('aria-current','step');return li;}));
     this.log.add(`${restore?'Recovery':'Install'} session · ${release.project} · ${release.version}`);
     this.log.add('Release catalogue signature verified. USB connection required before preparation.');
@@ -54,7 +54,7 @@ export class ActivityPanel {
     [...this.$('install-steps').children].forEach((li,i)=>{li.dataset.state=i<index||i===index&&done?'done':i===index?'current':'waiting';li.removeAttribute('aria-current');if(i===index&&!done)li.setAttribute('aria-current','step');});
   }
   start(phase,label){this.operation=phase;this.phase=null;this.active=true;this.$('activity-state').textContent='Live';this.$('status-box').dataset.state='busy';this.event({type:'progress',phase,label});}
-  finish(step,label){this.active=false;this.log.flush();this.step(step,true);this.$('progress').value=1;this.$('progress-value').textContent='100%';this.$('progress-label').textContent=label;this.$('status-box').dataset.state='success';this.$('activity-state').textContent=step===3?'Complete':'Ready';this.renderTime();}
+  finish(step,label){this.active=false;this.log.flush();this.step(step,true);this.$('progress').value=1;this.$('progress-value').textContent='100%';this.$('progress-label').textContent=label;this.$('status-box').dataset.state='success';this.$('activity-state').textContent=step===2?'Complete':'Ready';this.renderTime();}
   fail(){this.active=false;this.log.flush();this.$('status-box').dataset.state='error';this.$('activity-state').textContent='Stopped';const current=this.$('install-steps').querySelector('[aria-current]');if(current)current.dataset.state='error';this.renderTime();}
   event(event){
     if(event.type==='terminal'){this.log.terminal(event.text,event.newline);return;}
@@ -64,8 +64,8 @@ export class ActivityPanel {
     const now=performance.now();if(phase===this.phase&&label===this.progressLabel&&this.rows.has(id)&&done<total&&now-(this.lastPaint||0)<50)return;
     this.lastPaint=now;this.progressLabel=label;
     if(phase!==this.phase){this.phase=phase;this.rows.clear();this.$('transfer-progress').replaceChildren();this.milestones.clear();this.log.flush();this.log.add(label);}
-    const step=this.restore?({connect:0,check:1,restore:2,write:2,verify:3,rollback:2}[phase]):({connect:0,download:1,check:1,backup:1,save:2,write:3,verify:3,rollback:3}[phase]);
-    if(phase==='check'&&this.operation==='write')this.step(3);else if(step!==undefined)this.step(step);
+    const step=({connect:0,download:1,check:1,backup:1,save:1,write:1,restore:1,verify:2,rollback:1})[phase];
+    if(step!==undefined)this.step(step);
     this.$('progress-label').textContent=({connect:'USB connection',download:'Download progress',check:'Checking',backup:'Backup progress',save:'Saving backup',write:'Transfer progress',verify:'Verification progress',rollback:'Recovery progress',restore:'Restore progress'})[phase]||label;
     const bar=this.$('progress');bar.hidden=false;
     if(Number.isFinite(overallTotal)&&overallTotal>0&&Number.isFinite(overallDone)){

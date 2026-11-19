@@ -55,7 +55,7 @@ export function validateIdentity(identity, device) {
   requireThat(/^(?:[0-9a-f]{2}:){5}[0-9a-f]{2}$/.test(identity.mac) && identity.mac !== '00:00:00:00:00:00' && identity.mac !== 'ff:ff:ff:ff:ff:ff', 'Could not identify the connected device.');
 }
 export function checkSameDevice(current, saved) {
-  requireThat(['chip','imageChipId','capacity','mac'].every(k => current[k] === saved[k]), 'The connected device changed. Reconnect the device that owns this backup.');
+  requireThat(['chip','imageChipId','capacity','mac'].every(k => current[k] === saved[k]), 'The connected device changed. Reconnect the device used for this operation.');
 }
 export function permittedRange(device, address, length) {
   if (!integer(address) || !integer(length) || !length || address % sector || length % sector) return false;
@@ -132,11 +132,36 @@ export async function readVerified(loader, address, length, progress = () => {},
     });
     result.set(data, offset); progress((offset + size) / length);
   }
-  requireThat((await loader.flashMd5sum(address, length)).toLowerCase() === md5Hex(result), 'Device backup verification failed.');
-  observe(listener,{type:'log',source:'VERIFY',level:'success',message:`Backup MD5 OK · ${hexAddress(address)} · ${length} bytes`});
+  requireThat((await loader.flashMd5sum(address, length)).toLowerCase() === md5Hex(result), 'Device read verification failed.');
+  observe(listener,{type:'log',source:'VERIFY',level:'success',message:`Read MD5 OK · ${hexAddress(address)} · ${length} bytes`});
   return result;
 }
-export async function prepare(loader, release, device, identity, files, progress = () => {}, listener = () => {}) {
+// Metadata is a backup recommendation only; it never grants write authority.
+export async function inspectInstallation(loader, release, device, catalog, listener = () => {}) {
+  const table=await readVerified(loader,0x8000,sector,()=>{},listener);
+  const rows=parsePartitions(table,device.flashBytes);const matchingMap=samePartitions(rows,release.partitions);
+  let currentProject=null;
+  if(matchingMap){
+    const app=release.parts.find(p=>p.kind==='application');
+    const header=await readVerified(loader,app.address,sector,()=>{},listener);
+    if(header[0]===0xe9&&bytesToHex(header.subarray(32,36))==='3254cdab'){
+      const raw=header.subarray(80,112);const end=raw.indexOf(0);const name=raw.subarray(0,end<0?raw.length:end);
+      if(name.every(b=>b>=32&&b<=126)){
+        const projectName=decoder.decode(name);
+        if(projectName==='stardust-sticks3')currentProject='blackjack';
+        else if(projectName==='stopwatch-firmware')currentProject='stopwatch';
+        else if(projectName==='arduino-lib-builder'){
+          const candidates=new Set(catalog.releases.filter(r=>r.device===device.id&&['seeder','phoenix'].includes(r.project)&&samePartitions(rows,r.partitions)).map(r=>r.project));
+          if(candidates.size===1)currentProject=[...candidates][0];
+        }
+      }
+    }
+  }
+  const reason=!matchingMap?'layout':currentProject&&currentProject!==release.project?'project':!currentProject?'unknown':null;
+  return {matchingMap,currentProject,reason,tableSha256:await sha256(table)};
+}
+
+export async function prepare(loader, release, device, identity, files, progress = () => {}, listener = () => {}, options = { backup: true }) {
   validateIdentity(identity, device);
   let parts = validateParts(release, device, files);
   progress('Reading partition table',0);
@@ -157,25 +182,37 @@ export async function prepare(loader, release, device, identity, files, progress
     if(differs)changed.push(part);
     observe(listener,{type:'log',source:'CHECK',message:`${part.kind} @ ${hexAddress(part.address)} · ${part.data.length} bytes · ${differs?'update required':'already matches; skipped'}`});
   }
-  const ranges = [];
+  const ranges = [];const captureBackup=options.backup!==false;
   const backupBytes=changed.reduce((n,p)=>n+roundUp(p.data.length),0);let backedUp=0;
   for (let i = 0; i < changed.length; i++) {
-    const part = changed[i];
-    progress(`Backing up ${part.kind}`, i / changed.length);
-    const length=roundUp(part.data.length);
-    const before = await readVerified(loader, part.address, length, p => {progress(`Backing up ${part.kind}`, (i+p)/changed.length);observe(listener,{type:'progress',phase:'backup',label:'Preparing recovery backup',id:`${part.kind} @ ${hexAddress(part.address)}`,done:Math.round(p*length),total:length,overallDone:backedUp+Math.round(p*length),overallTotal:backupBytes});},listener);
-    backedUp+=length;
-    const after = before.slice(); after.set(part.data);
-    ranges.push({ address: part.address, before, after, sha256: await sha256(before), md5: md5Hex(before), kind: part.kind });
+    const part = changed[i];const length=roundUp(part.data.length);
+    let before=null,after,md5;
+    if(captureBackup){
+      progress(`Backing up ${part.kind}`, i / changed.length);
+      before=await readVerified(loader,part.address,length,p=>{progress(`Backing up ${part.kind}`,(i+p)/changed.length);observe(listener,{type:'progress',phase:'backup',label:'Preparing recovery backup',id:`${part.kind} @ ${hexAddress(part.address)}`,done:Math.round(p*length),total:length,overallDone:backedUp+Math.round(p*length),overallTotal:backupBytes});},listener);
+      backedUp+=length;after=before.slice();md5=md5Hex(before);
+    }else{
+      observe(listener,{type:'progress',phase:'check',label:'Checking flash ranges'});
+      md5=(await loader.flashMd5sum(part.address,length)).toLowerCase();
+      requireThat(/^[0-9a-f]{32}$/.test(md5),'Device range digest is invalid.');
+      after=new Uint8Array(length);
+      // Preserve the untouched tail with one sector read, not a full-app backup.
+      const used=part.data.length%sector;
+      if(used){const tail=await readVerified(loader,part.address+length-sector,sector,()=>{},listener);after.set(tail.subarray(used),part.data.length);}
+      observe(listener,{type:'log',source:'CHECK',message:`Range checked without recovery backup · ${part.kind} @ ${hexAddress(part.address)} · ${length} bytes`});
+    }
+    after.set(part.data);
+    ranges.push({address:part.address,before,after,...(before?{sha256:await sha256(before)}:{}),md5,kind:part.kind});
   }
-  const plan = { identity: { ...identity }, release: release.id, device: device.id, tableSha256: await sha256(table), replacingMap: !matchingMap, ranges };
+  const plan = { identity: { ...identity }, release: release.id, device: device.id, tableSha256: await sha256(table), replacingMap: !matchingMap, backupCaptured:captureBackup, ranges };
   recoveryAuthorities.set(plan, isBlackjack(release) ? recoveryAuthority(release,device) : []);
-  observe(listener,{type:'log',source:'BACKUP',level:'success',message:`${ranges.length} changed ranges backed up and verified · ${backupBytes} bytes. No flash written.`});
+  observe(listener,{type:'log',source:captureBackup?'BACKUP':'CHECK',level:'success',message:captureBackup?`${ranges.length} changed ranges backed up and verified · ${backupBytes} bytes. No flash written.`:`${ranges.length} changed ranges checked. Recovery backup skipped; no flash written.`});
   return plan;
 }
 
 const backupMagic = encoder.encode('BFLASH1\0');
 export async function encodeBackup(plan) {
+  requireThat(plan.ranges.length>0&&plan.ranges.every(r=>r.before instanceof Uint8Array),'Create a recovery backup first.');
   const ranges = [];
   for (const range of plan.ranges) ranges.push({ address: range.address, length: range.before.length, sha256: await sha256(range.before), md5: md5Hex(range.before) });
   const manifest = encoder.encode(JSON.stringify({ format:1, device:plan.device, release:plan.release, identity:plan.identity, tableSha256:plan.tableSha256, ranges }));
@@ -233,18 +270,20 @@ export async function writeRanges(loader, ranges, field, progress = () => {}, li
   }
 }
 export async function installTransaction(loader, plan, identify, progress = () => {}, listener = () => {}) {
-  observe(listener,{type:'progress',phase:'check',label:'Rechecking device and saved flash before writing'});
+  observe(listener,{type:'progress',phase:'check',label:'Rechecking device and flash before writing'});
   checkSameDevice(await identify(), plan.identity);
   // Detect an unexpected mutation between preparing and writing. No write on failure.
-  for (const r of plan.ranges) requireThat((await loader.flashMd5sum(r.address,r.before.length)).toLowerCase() === r.md5, 'Flash changed after backup. Prepare a new installation.');
+  for (const r of plan.ranges) requireThat((await loader.flashMd5sum(r.address,r.after.length)).toLowerCase() === r.md5, 'Flash changed after preparation. Prepare a new installation.');
   const currentTable = await readVerified(loader,0x8000,sector,()=>{},listener);
   requireThat(await sha256(currentTable) === plan.tableSha256, 'Partition table changed after preparation.');
-  observe(listener,{type:'log',source:'CHECK',level:'success',message:'Same device, saved ranges and partition table verified. Starting bounded writes.'});
+  observe(listener,{type:'log',source:'CHECK',level:'success',message:'Same device, prepared ranges and partition table verified. Starting bounded writes.'});
   try {
     await writeRanges(loader,plan.ranges,'after',p => progress('Installing',p),listener);
     return { installed:true };
   } catch (error) {
-    observe(listener,{type:'log',source:'FLASH',level:'error',message:`Install failed: ${error.message}. Attempting automatic recovery.`});
+    const recoverable=plan.ranges.every(r=>r.before instanceof Uint8Array);
+    observe(listener,{type:'log',source:'FLASH',level:'error',message:`Install failed: ${error.message}. ${recoverable?'Attempting automatic recovery.':'No recovery backup was prepared.'}`});
+    if(!recoverable)throw new Error('Installation stopped without a recovery backup. Reconnect in flashing mode and retry the installation. '+error.message);
     try {
       checkSameDevice(await identify(),plan.identity);
       await writeRanges(loader,plan.ranges,'before',p => progress('Restoring previous firmware',p),listener,'rollback');

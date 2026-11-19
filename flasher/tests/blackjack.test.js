@@ -53,3 +53,10 @@ test('interrupted migration rolls back journals too; untrusted backup cannot ext
  const l=new Loader(base.releases.find(r=>r.device==='sticks3').partitions);const before=l.memory.slice();const p=await prepare(l,release,d,identity,files);l.fail=true;const result=await installTransaction(l,p,async()=>identity);assert.equal(result.restored,true);assert.deepEqual(l.memory,before);
  const fake={identity,ranges:[{address:0x7f0000,before:new Uint8Array(0x2000),md5:md5Hex(new Uint8Array(0x2000))}],recoveryAuthority:[{address:0x7f0000,length:0x2000}]};await assert.rejects(restoreTransaction(l,fake,d,async()=>identity),/Invalid recovery/);
 });
+
+test('optional-backup migration initializes only declared new journals and keeps NVS without capturing prior payloads',async()=>{
+ const l=new Loader(base.releases.find(r=>r.device==='sticks3').partitions);const before=l.memory.slice();
+ const p=await prepare(l,release,d,identity,files,()=>{},()=>{},{backup:false});assert.equal(p.replacingMap,true);assert.ok(p.ranges.every(r=>r.before===null));
+ await assert.rejects(encodeBackup(p),/Create a recovery backup/);assert.equal((await installTransaction(l,p,async()=>identity)).installed,true);
+ assert.deepEqual(l.memory.slice(0x9000,0xe000),before.slice(0x9000,0xe000));assert.ok(l.memory.slice(0x770000,0x7f2000).every(x=>x===255));
+});
