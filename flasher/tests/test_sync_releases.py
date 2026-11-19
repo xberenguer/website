@@ -61,6 +61,24 @@ class Provider:
                 assets[S.P.APP]=(ROOT/r['files'][0]['url']).read_bytes()
                 assets[S.P.ASSETS]=(ROOT/r['files'][1]['url']).read_bytes()
                 assets[S.P.SUMS]=(''.join(S.sha(b)+'  '+name+'\n' for name,b in assets.items())).encode()
+            elif project=='blackjack':
+                tag='v0.11.3';ver=tag[1:]
+                r=next(r for r in catalog['releases'] if r['project']=='stopwatch')
+                app=bytearray((ROOT/r['files'][0]['url']).read_bytes());app[3]=(3<<4)|(app[3]&15)
+                app[48:80]=ver.encode().ljust(32,b'\0');repair_image(app,0);app=bytes(app)
+                sr=next(r for r in catalog['releases'] if r['project']=='seeder' and r['device']=='sticks3')
+                source=(ROOT/sr['files'][0]['url']).read_bytes()
+                merged=bytearray(b'\xff'*(0x10000+len(app)));merged[:0x8000]=source[:0x8000];merged[0xe000:0x10000]=source[0xe000:0x10000]
+                table=bytearray(b'\xff'*4096)
+                for i,p in enumerate(S.BJ.PARTITIONS):
+                    struct.pack_into('<HBBII16sI',table,i*32,0x50aa,p['type'],p['subtype'],p['offset'],p['size'],p['label'].encode(),p['flags'])
+                at=len(S.BJ.PARTITIONS)*32;struct.pack_into('<H',table,at,0xebeb);table[at+16:at+32]=hashlib.md5(table[:at]).digest()
+                merged[0x8000:0x9000]=table;merged[0x10000:]=app
+                names=['blackjack-sticks3-app.bin','blackjack-sticks3-install.bin'];assets=dict(zip(names,[app,bytes(merged)]))
+                fs=[dict(id=n,url=n,bytes=len(assets[n]),sha256=S.sha(assets[n])) for n in names]
+                rows=[dict(device='sticks3',version=ver,contract=S.BJ.CONTRACT,files=fs,parts=S.BJ.parts(*names,len(app)),partitions=S.BJ.PARTITIONS)]
+                assets['flasher-release.json']=S.encoded(dict(schemaVersion=1,project=project,repository=repo,tag=tag,commit=COMMIT,releases=rows))
+                assets['SHA256SUMS']=''.join(S.sha(b)+'  '+n+'\n' for n,b in assets.items()).encode()
             else:
                 r=old[0];ver='1.1.2';tag='v'+ver
                 b=(ROOT/r['files'][0]['url']).read_bytes();b=next_image(b,r['version'],ver,0)
@@ -113,7 +131,7 @@ class SyncTests(unittest.TestCase):
         self.assertTrue(all(s['state']=='current' for s in status['projects']))
         for old in self.catalog['releases']:
             self.assertIn(old,c['recoveryReleases'])
-        self.assertEqual(len(c['releases']),len(self.catalog['releases']))
+        self.assertEqual(len(c['releases']),len(self.catalog['releases'])+1)
         self.assertGreaterEqual(len(blobs),5)
         S.validate_files(ROOT,c,blobs,NODE)
 
@@ -248,4 +266,95 @@ class SyncTests(unittest.TestCase):
             finally:del os.environ['FLASHER_EPHEMERAL_TEST_KEY']
 
 
-if __name__=='__main__':unittest.main()
+
+
+class BlackjackAdapterTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.catalog=json.loads((ROOT/'catalog.json').read_bytes())
+        cls.config=json.loads((ROOT/'releases.config.json').read_bytes())
+        cls.c=next(c for c in cls.config['projects'] if c['project']=='blackjack')
+
+    def setUp(self):
+        self.provider=Provider(self.catalog,self.config)
+        self.meta=self.provider.meta[S.REPOSITORIES['blackjack']]
+
+    def adapt(self):
+        return S.BJ.releases(S,self.c,self.meta,COMMIT,self.provider)
+
+    def alter(self, fn):
+        # Rewrite internally consistent release metadata/checksums, so tests reach
+        # the independent image/layout checks rather than just a digest mismatch.
+        data={a['name']:self.provider.data[a['browser_download_url']] for a in self.meta['assets']}
+        manifest=json.loads(data['flasher-release.json'])
+        fn(manifest,data)
+        for f in manifest['releases'][0]['files']:
+            f.update(bytes=len(data[f['id']]),sha256=S.sha(data[f['id']]))
+        data['flasher-release.json']=S.encoded(manifest)
+        data['SHA256SUMS']=''.join(S.sha(b)+'  '+n+'\n' for n,b in data.items() if n!='SHA256SUMS').encode()
+        for a in self.meta['assets']:
+            b=data[a['name']];self.provider.data[a['browser_download_url']]=b;a.update(size=len(b),digest='sha256:'+S.sha(b))
+
+    def test_bootstrap_preview_and_immutable_local_names(self):
+        entries,blobs=self.adapt();r=entries[0]
+        self.assertEqual(r['status'],'Preview')
+        self.assertEqual(r['contract'],S.BJ.CONTRACT)
+        self.assertEqual(len(blobs),2)
+        self.assertEqual(r['files'][0]['id'],'blackjack-sticks3-0.11.3-app.bin')
+        c=S.apply_entries(self.catalog,entries)
+        self.assertEqual(next(p for p in c['projects'] if p['id']=='blackjack'),S.BJ.PROJECT)
+        self.assertEqual(len(c['releases']),len(self.catalog['releases'])+1)
+        self.assertEqual(S.apply_entries(c,entries),c)
+
+    def test_binary_alias_and_unqualified_boot_are_rejected(self):
+        for mutation,message in [
+          (lambda m,d:d.__setitem__('blackjack-sticks3-install.bin',d['blackjack-sticks3-install.bin'][:-1]+b'X'),'payloads differ'),
+          (lambda m,d:d.__setitem__('blackjack-sticks3-install.bin',b'X'+d['blackjack-sticks3-install.bin'][1:]),'ESP32-S3'),
+          (lambda m,d:m['releases'][0]['parts'][0].update(length=4096),'flash layout'),
+          (lambda m,d:m['releases'][0]['partitions'][-1].update(subtype=2),'flash layout'),
+          (lambda m,d:m.update(commit='0'*40),'identity differs')]:
+            with self.subTest(message=message):
+                self.setUp();self.alter(mutation)
+                with self.assertRaisesRegex(S.Invalid,message):self.adapt()
+
+    def test_other_valid_bootloader_and_boot_padding_are_rejected(self):
+        def mutation(m,d):
+            b=bytearray(d['blackjack-sticks3-install.bin']);b[2]^=1;repair_image(b,0)
+            d['blackjack-sticks3-install.bin']=bytes(b)
+        self.alter(mutation)
+        with self.assertRaisesRegex(S.Invalid,'qualified public build'):self.adapt()
+        self.setUp()
+        def padding(m,d):
+            b=bytearray(d['blackjack-sticks3-install.bin']);b[0x5000]=0
+            d['blackjack-sticks3-install.bin']=bytes(b)
+        self.alter(padding)
+        with self.assertRaisesRegex(S.Invalid,'qualified public build'):self.adapt()
+
+    def test_nvs_data_ota_bytes_and_checksums_are_rejected(self):
+        for offset,message in [(0x9000,'NVS gap'),(0xe000,'OTA bytes')]:
+            self.setUp()
+            def mutation(m,d):
+                b=bytearray(d['blackjack-sticks3-install.bin']);b[offset]^=1;d['blackjack-sticks3-install.bin']=bytes(b)
+            self.alter(mutation)
+            with self.assertRaisesRegex(S.Invalid,message):self.adapt()
+        self.setUp()
+        a=next(a for a in self.meta['assets'] if a['name']=='SHA256SUMS')
+        b=b'0'*64+b'  blackjack-sticks3-app.bin\n';a.update(size=len(b),digest='sha256:'+S.sha(b));self.provider.data[a['browser_download_url']]=b
+        with self.assertRaisesRegex(S.Invalid,'release checksums'):self.adapt()
+
+    def test_missing_native_gate_does_not_bootstrap_project(self):
+        original=self.provider.metadata
+        def metadata(repo,endpoint):
+            result=original(repo,endpoint)
+            if repo==S.REPOSITORIES['blackjack'] and endpoint.startswith('commits/'):
+                result['check_runs']=[]
+            return result
+        self.provider.metadata=metadata
+        c,_,status=S.sync(ROOT,self.config,self.provider,NODE)
+        row=next(r for r in status['projects'] if r['project']=='blackjack')
+        self.assertEqual(row['state'],'blocked');self.assertIn('native',row['message'])
+        self.assertFalse(any(r['project']=='blackjack' for r in c['releases']))
+        self.assertFalse(any(p['id']=='blackjack' for p in c['projects']))
+
+
+if __name__ == '__main__': unittest.main()

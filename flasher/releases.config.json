@@ -221,6 +221,69 @@
           ]
         }
       }
+    },
+    {
+      "project": "blackjack",
+      "repository": "xberenguer/blackjack-trainer",
+      "adapter": "blackjack",
+      "manifest": "flasher-release.json",
+      "requiredChecks": [
+        "native"
+      ],
+      "devices": {
+        "sticks3": {
+          "partitions": [
+            {
+              "type": 1,
+              "subtype": 2,
+              "offset": 36864,
+              "size": 20480,
+              "label": "nvs",
+              "flags": 0
+            },
+            {
+              "type": 1,
+              "subtype": 0,
+              "offset": 57344,
+              "size": 8192,
+              "label": "otadata",
+              "flags": 0
+            },
+            {
+              "type": 0,
+              "subtype": 16,
+              "offset": 65536,
+              "size": 6291456,
+              "label": "app0",
+              "flags": 0
+            },
+            {
+              "type": 1,
+              "subtype": 130,
+              "offset": 6356992,
+              "size": 1441792,
+              "label": "reserved",
+              "flags": 0
+            },
+            {
+              "type": 1,
+              "subtype": 65,
+              "offset": 7798784,
+              "size": 524288,
+              "label": "rustresume",
+              "flags": 0
+            },
+            {
+              "type": 1,
+              "subtype": 64,
+              "offset": 8323072,
+              "size": 8192,
+              "label": "rustsave",
+              "flags": 0
+            }
+          ]
+        }
+      }
     }
   ]
 }

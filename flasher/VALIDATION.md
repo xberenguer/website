@@ -47,3 +47,13 @@ The signed catalog binds hashes, offsets, device maps and versions. It does not 
 - The website signing environment is restricted to the main branch; the existing trusted public key is unchanged.
 - No USB connection, physical flash or hardware acceptance was performed for this pipeline update. Browser automation was unavailable during this run; the actual signing/installer modules were exercised by tests.
 - Deployment is verified separately by comparing the live atomic catalog, detached signature and active firmware SHA-256 with the publication. Each automatic sync records its check/deployment outcome in GitHub Actions.
+
+
+## Blackjack adapter — November 18, 2026
+
+- 47 JavaScript installer checks and 73 Python release/publishing checks pass, with no skipped tests. The dedicated Blackjack regressions cover exact-map app-only updates without journal reads; independently preserved typed public/private journals; bounded first-install migration and initialization; every affected sector in the recovery backup; damaged-table recovery; interrupted-write rollback; foreign NVS rejection; and untrusted recovery files unable to extend write authority.
+- The separate release adapter rejects mismatched source identity, changed app/install payloads, invalid maps/slices, NVS data, altered OTA bytes, missing checksums, and a different otherwise-valid bootloader. Its source CI requirement is exactly `native`; it does not inherit physical testing claims.
+- The actual public `v0.11.3` package at source `cbb6c0d831691a2fbb7b3df365170bddcf9a3694` passes the offline adapter and actual JavaScript catalog/partition contract. Its app is 3,352,832 bytes, SHA-256 `50d47e4702087dad5fe4ca9510dbaca04a4825e8ea5b06d29f678c2468509335`. This local check does not verify published GitHub CI or prove browser hardware installation.
+- Actual Chrome passes an explicitly synthetic release/card UI smoke, using an ephemeral test signer and cancelled fake port chooser: signed loading, Blackjack deep link, Preview/manual/file presentation, board filtering, model confirmation and disabled installation without a saved backup. No physical USB device is accessed.
+- The existing trusted signing key, generic protected ranges and security checks are unchanged. No signed catalog or firmware is manually substituted. The first real offering is added only by the existing verified signing/sync pipeline.
+- **Blackjack browser installation/migration remains Preview. No physical installation, restore write or power-loss qualification is claimed for this adapter.** Native firmware device validation is separate.

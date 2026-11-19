@@ -20,6 +20,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -28,11 +29,14 @@ HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location('phoenix_image_contract', HERE/'sync-phoenix.py')
 P = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(P)
+spec_bj = importlib.util.spec_from_file_location('blackjack_image_contract', HERE/'sync-blackjack.py')
+BJ = importlib.util.module_from_spec(spec_bj)
+spec_bj.loader.exec_module(BJ)
 Invalid = P.Invalid
 need = P.need
 sha = P.sha
 REPOSITORIES = {'seeder': 'xberenguer/Seeder-Fork', 'phoenix': P.REPO,
-                'stopwatch': 'xberenguer/stopwatch'}
+                'stopwatch': 'xberenguer/stopwatch', 'blackjack':'xberenguer/blackjack-trainer'}
 TRUSTED_FINGERPRINT = '34568ae48435426bb68028eb6f3bb338a2cba5115c906a33ca26c3592c31c5d4'
 
 
@@ -236,6 +240,7 @@ def manifest_releases(config, meta, commit, provider, old):
 
 
 def adapter_releases(config, meta, commit, provider, old):
+    if config['adapter'] == 'blackjack': return BJ.releases(SimpleNamespace(**globals()),config,meta,commit,provider)
     if config['adapter'] == 'manifest': return manifest_releases(config,meta,commit,provider,old)
     repo=config['repository']; tag=meta['tag_name']
     if config['adapter'] == 'phoenix':
@@ -270,6 +275,11 @@ def apply_entries(catalog, entries):
     result=copy.deepcopy(catalog)
     for new in entries:
         slots=[(i,r) for i,r in enumerate(result['releases']) if r['project'] == new['project'] and r['device'] == new['device']]
+        if not slots and new['project'] == 'blackjack' and new['device'] == 'sticks3':
+            need(not any(r['project'] == 'blackjack' for r in result['releases']+result.get('recoveryReleases',[])) and not any(p['id'] == 'blackjack' for p in result['projects']), 'Partial Blackjack bootstrap is not allowed')
+            result['projects'].append(copy.deepcopy(BJ.PROJECT))
+            result['releases'].append(copy.deepcopy(new))
+            continue
         need(len(slots) == 1, 'Expected exactly one existing project/device release')
         i,old=slots[0]; nv=version(new['version'],new['device']); ov=version(old['version'],old['device'])
         need(nv >= ov, 'Refusing firmware downgrade')
@@ -368,7 +378,7 @@ def sync(root, config, provider, node):
             commit=source_commit(provider,repo,tag)
             successful_checks(provider,repo,commit,c.get('requiredChecks',[]))
             old={r['device']:r for r in updated['releases'] if r['project'] == project}
-            need(set(old) == set(c['devices']),'Configured devices differ from catalog')
+            need(set(old) == set(c['devices']) or (project == 'blackjack' and not old),'Configured devices differ from catalog')
             entries,data=adapter_releases(c,meta,commit,provider,old)
             proposed=apply_entries(updated,entries)
             validate_files(root,proposed,{**blobs,**data},node)

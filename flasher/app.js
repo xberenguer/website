@@ -53,7 +53,7 @@ function openInstaller(r,restore) {
   $('recovery-guide').textContent=device.recovery;
   $('model-label').textContent=`My connected device is exactly the ${device.name}${device.id==='waveshare175c'?' (C model)':' / K150'}.`;
   $('model-confirm').checked=false; $('backup-confirm').checked=false; $('saved-check').hidden=true; $('progress').hidden=true;
-  $('replace-warning').textContent=restore?'Restoring replaces the current firmware with your saved sectors. Use only your own recovery file.':'Installing replaces the current project and restarts the device. Save any current seed first.';
+  $('replace-warning').textContent=restore?'Restoring replaces the current firmware with your saved sectors. Use only your own recovery file.':r.project === 'blackjack'?'Installing restarts the device. Compatible Blackjack journals are preserved; replacing another project can overwrite its storage. Save the recovery backup before writing.':'Installing replaces the current project and restarts the device. Save any current seed first.';
   actions('connect'); status('Ready to connect','Choose the matching USB port when your browser asks.'); lock(false); $('installer').showModal();
 }
 $('model-confirm').onchange=()=>{ if(!busy)$('connect').disabled=!supportsUSB||!$('model-confirm').checked; };
@@ -71,7 +71,7 @@ $('prepare').onclick=async()=>{
   if(busy||!connection||!identity)return;lock(true);actions();status('Checking firmware','Downloading the pinned release and checking its SHA-256 hashes.');
   try { const files=await fetchFiles(release,fetch,status); status('Download verified','Checking the connected flash.'); plan=await prepare(connection.loader,release,device,identity,files,progress); $('progress').hidden=true;
     if(!plan.ranges.length){status('This version is already installed',`Every selected firmware range matches ${release.version}. No flash was written.`);actions('finish');}
-    else {status('Recovery backup prepared',`${plan.ranges.length} changed flash ${plan.ranges.length===1?'range':'ranges'} verified and backed up in this browser. Save the recovery file to enable installation.`);$('replace-warning').textContent=plan.replacingMap?'This replaces the current partition layout and application. The NVS region is skipped; saved settings may not transfer between projects.':'The matching device layout is retained. Only changed ranges will be written.';actions('save','finish');}
+    else {status('Recovery backup prepared',`${plan.ranges.length} changed flash ${plan.ranges.length===1?'range':'ranges'} verified and backed up in this browser. Save the recovery file to enable installation.`);$('replace-warning').textContent=plan.replacingMap && release.project === 'blackjack'?'Blackjack replaces the partition map and application. Existing NVS and exact compatible Blackjack journals are preserved; newly claimed journal regions are backed up and initialized.':plan.replacingMap?'This replaces the current partition layout and application. The NVS region is skipped; saved settings may not transfer between projects.':'The matching device layout is retained. Only changed ranges will be written.';actions('save','finish');}
   }catch(e){plan=null;try{await connection?.close(true);}catch{}connection=null;identity=null;status('Preparation stopped',errorMessage(e)+' No flash was written. Reconnect before trying again.');$('progress').hidden=true;actions('connect');}
   finally{lock(false);}
 };

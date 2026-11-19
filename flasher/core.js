@@ -1,3 +1,4 @@
+import { validateBlackjack, isBlackjack, blackjackInitializations, recoveryAuthority } from './blackjack.js';
 import { readFlashFramed } from './flash-read.js';
 import { md5 } from './vendor/noble/legacy.js';
 import { bytesToHex } from './vendor/noble/utils.js';
@@ -9,6 +10,7 @@ export function requireThat(ok, message) { if (!ok) throw new Error(message); }
 export const roundUp = value => Math.ceil(value / sector) * sector;
 const integer = value => Number.isSafeInteger(value) && value >= 0;
 const erased = bytes => bytes.every(b => b === 255);
+const recoveryAuthorities = new WeakMap();
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8', { fatal: true });
 
@@ -62,6 +64,7 @@ export function permittedRange(device, address, length) {
     device.id === 'sticks3' && ((address >= 0 && end <= 0x9000) || (address >= 0xe000 && end <= 0x7f0000));
 }
 export function validateParts(release, device, files) {
+  validateBlackjack(release, device, files);
   requireThat(release.device === device.id, 'Release and device do not match.');
   const parts = release.parts.map(p => {
     const source = files.get(p.file);
@@ -75,6 +78,7 @@ export function validateParts(release, device, files) {
   });
   const sorted = [...parts].sort((a,b) => a.address - b.address);
   requireThat(sorted.every((p,i) => !i || p.address >= sorted[i-1].address + roundUp(sorted[i-1].length)), 'Firmware slices overlap.');
+  if (isBlackjack(release)) requireThat(samePartitions(parsePartitions(parts.find(p => p.kind === 'partitions').data,device.flashBytes),release.partitions), 'Blackjack binary partition table differs.');
   if (device.id === 'waveshare175c') requireThat(parts.length === 1 && parts[0].address === 0x200000 && parts[0].kind === 'application', 'Waveshare requires an application-only image.');
   return parts;
 }
@@ -113,12 +117,16 @@ export async function readVerified(loader, address, length, progress = () => {})
 }
 export async function prepare(loader, release, device, identity, files, progress = () => {}) {
   validateIdentity(identity, device);
-  const parts = validateParts(release, device, files);
+  let parts = validateParts(release, device, files);
   progress('Reading partition table',0);
   const table = await readVerified(loader, 0x8000, sector);
   const rows = parsePartitions(table, device.flashBytes);
   const matchingMap = samePartitions(rows, release.partitions);
   if (device.id === 'waveshare175c') requireThat(matchingMap, 'Factory partition map differs. This installer preserves the Waveshare factory layout; use the manual recovery guide.');
+  if (isBlackjack(release)) {
+    parts = matchingMap ? parts.filter(p => p.kind === 'application') : [...parts,...blackjackInitializations(release,rows)];
+    requireThat(!rows.filter(r => r.type === 1 && r.subtype === 2).some(r => parts.some(p => p.address < r.offset+r.size && r.offset < p.address+roundUp(p.length))), 'Blackjack installation would overlap existing NVS. Use manual recovery.');
+  }
   const changed = [];
   for (const part of parts) {
     progress('Comparing '+part.kind,0);
@@ -132,7 +140,9 @@ export async function prepare(loader, release, device, identity, files, progress
     const after = before.slice(); after.set(part.data);
     ranges.push({ address: part.address, before, after, sha256: await sha256(before), md5: md5Hex(before), kind: part.kind });
   }
-  return { identity: { ...identity }, release: release.id, device: device.id, tableSha256: await sha256(table), replacingMap: !matchingMap, ranges };
+  const plan = { identity: { ...identity }, release: release.id, device: device.id, tableSha256: await sha256(table), replacingMap: !matchingMap, ranges };
+  recoveryAuthorities.set(plan, isBlackjack(release) ? recoveryAuthority(release,device) : []);
+  return plan;
 }
 
 const backupMagic = encoder.encode('BFLASH1\0');
@@ -155,11 +165,12 @@ export async function decodeBackup(bytes, catalog) {
   // A saved recovery file must remain usable after its release leaves the UI.
   const release = [...catalog.releases, ...(catalog.recoveryReleases || [])]
     .find(r => r.id === manifest.release && r.device === manifest.device);
-  requireThat(manifest.format === 1 && device && release && Array.isArray(manifest.ranges) && manifest.ranges.length > 0 && manifest.ranges.length <= release.parts.length, 'Unsupported recovery file.');
+  const authority = release && device ? recoveryAuthority(release,device) : [];
+  requireThat(manifest.format === 1 && device && release && Array.isArray(manifest.ranges) && manifest.ranges.length > 0 && manifest.ranges.length <= authority.length, 'Unsupported recovery file.');
   validateIdentity(manifest.identity, device);
   let at = 12+size; const used = new Set(); const ranges = [];
   for (const r of manifest.ranges) {
-    requireThat(integer(r.address) && integer(r.length) && !used.has(r.address) && release.parts.some(p => p.address === r.address && roundUp(p.length) === r.length) && permittedRange(device,r.address,r.length), 'Recovery file requests an unsupported address.');
+    requireThat(integer(r.address) && integer(r.length) && !used.has(r.address) && authority.some(p => p.address === r.address && p.length === r.length) && (permittedRange(device,r.address,r.length) || (isBlackjack(release) && r.address === 0x7f0000 && r.length === 0x2000)), 'Recovery file requests an unsupported address.');
     used.add(r.address);
     requireThat(at+r.length <= bytes.length, 'Truncated recovery data.');
     const before = bytes.slice(at,at+r.length); at += r.length;
@@ -167,7 +178,9 @@ export async function decodeBackup(bytes, catalog) {
     ranges.push({ ...r, before });
   }
   requireThat(at === bytes.length, 'Unexpected recovery data.');
-  return { ...manifest, ranges };
+  const plan = { ...manifest, ranges };
+  recoveryAuthorities.set(plan,isBlackjack(release) ? authority : []);
+  return plan;
 }
 
 export async function writeRanges(loader, ranges, field, progress = () => {}) {
@@ -198,7 +211,7 @@ export async function installTransaction(loader, plan, identify, progress = () =
 export async function restoreTransaction(loader, plan, device, identify, progress = () => {}) {
   validateIdentity(plan.identity,device);
   checkSameDevice(await identify(),plan.identity);
-  requireThat(plan.ranges.length > 0 && plan.ranges.every(r => permittedRange(device,r.address,r.before.length) && md5Hex(r.before) === r.md5), 'Invalid recovery ranges.');
+  requireThat(plan.ranges.length > 0 && plan.ranges.every(r => (permittedRange(device,r.address,r.before.length) || (device.id === 'sticks3' && recoveryAuthorities.get(plan)?.some(p => p.address === r.address && p.length === r.before.length) && r.address === 0x7f0000 && r.before.length === 0x2000)) && md5Hex(r.before) === r.md5), 'Invalid recovery ranges.');
   // The live table may have been interrupted mid-write; never require it to parse here.
   await writeRanges(loader,plan.ranges,'before',progress);
 }

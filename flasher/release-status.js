@@ -1,4 +1,5 @@
 // Release metadata is advisory. Only the signed catalog authorizes firmware.
+import { validateBlackjack } from './blackjack.js';
 import { requireThat, permittedRange, roundUp } from './core.js';
 
 const id = value => typeof value === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,159}$/.test(value);
@@ -36,6 +37,7 @@ export function validateCatalog(catalog) {
     requireThat(version(r.version) || (!current && typeof r.version === 'string' && version(r.version.replace(/ candidate$/, ''))), 'Invalid release version.');
     requireThat(text(r.status) && text(r.description) && text(r.qualification) && safeLink(r.source, true) && safeLink(r.manual, true), 'Invalid release provenance or captions.');
     if (current) { const slot = `${r.project}/${r.device}`; requireThat(!slots.has(slot), 'Multiple current releases for one project/device.'); slots.add(slot); }
+    validateBlackjack(r,d);
     unique(r.files, 'id', 'Invalid or duplicate firmware file IDs.');
     requireThat(r.files.length > 0 && r.files.every(f => /^[a-zA-Z0-9._-]+\.bin$/.test(f.id) && f.url === `firmware/${f.id}` && integer(f.bytes) && f.bytes > 0 && f.bytes <= d.flashBytes && /^[a-f0-9]{64}$/.test(f.sha256)), 'Invalid firmware file contract.');
     requireThat(Array.isArray(r.parts) && r.parts.length > 0 && r.parts.length <= 16, 'Missing firmware parts.');

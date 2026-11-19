@@ -19,6 +19,10 @@ The StickS3 image is merged with bounded boot/table/OTA/app slices and skipped N
 
 Publish the firmware and checksums using that project's release process. Phoenix requires `phoenix-confucius-sticks3.bin`, `feature-assets.bin` and `SHA256SUMS.txt`; Stopwatch requires `stopwatch-app.bin` and `SHA256SUMS`. Tags must be stable `vX.Y.Z` versions. The central updater validates the assets and supported device contract; it no longer needs the legacy locally signed whole-catalog bundle.
 
+## Publish Blackjack
+
+Publish `xberenguer/blackjack-trainer` as a stable `vX.Y.Z` release after its source commit passes the GitHub Actions `native` check. Include `blackjack-sticks3-app.bin`, `blackjack-sticks3-install.bin`, `flasher-release.json` and `SHA256SUMS`. Follow the exact [Blackjack two-file contract](BLACKJACK.md); existing generic merged-image contracts do not apply. The adapter independently binds the manifest to the release repository, tag and resolved source commit, checks both binary identities and qualified boot/OTA bytes, then creates immutable versioned website filenames. Never replace an existing version.
+
 ## Automatic synchronization
 
 `Sync firmware releases` runs approximately every 15 minutes and on manual dispatch. `repository_dispatch` with event type `firmware-released` can request an immediate run using an appropriately scoped credential; no cross-repository token is required for the scheduled fallback. GitHub schedules are best effort, not an exact delivery guarantee.

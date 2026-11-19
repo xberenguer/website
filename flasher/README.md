@@ -13,6 +13,7 @@ The installer follows the newest **published stable GitHub release** for each co
 | Seeder Fork | StickS3 / K150 and Waveshare AMOLED 1.75C | [Seeder Fork releases](https://github.com/xberenguer/Seeder-Fork/releases) |
 | Phoenix Link / Confucius Say | StickS3 / K150 | [Phoenix releases](https://github.com/xberenguer/phoenix-link-confucius-say/releases) |
 | Stopwatch | Waveshare AMOLED 1.75C | [Stopwatch releases](https://github.com/xberenguer/stopwatch/releases) |
+| Blackjack Trainer | StickS3 / K150 (browser path: Preview) | [Blackjack releases](https://github.com/xberenguer/blackjack-trainer/releases) |
 
 A published release is not a claim of physical testing for that exact binary. Hardware results remain separately stated. Missing, invalid or incomplete upstream releases leave the previous verified files available with an explicit blocked/unavailable status. Checks older than 45 minutes are marked unconfirmed. Previews are not automatically promoted into stable installs.
 
@@ -92,3 +93,10 @@ The browser loads one `catalog.signed.json` envelope containing the exact catalo
 The signing key is an encrypted GitHub Actions environment secret restricted to the website's `main` branch. It is never committed or served. Project releases carry bounded, pinned asset identities; the website independently checks their bytes and flash layout before signing. [Signing and trust model](SIGNING.md).
 
 The old Phoenix-specific scripts remain for verifying historical bundles, but their scheduled workflow is retired. Do not use an old whole-catalog bundle to replace the current multi-project catalog.
+
+
+## Blackjack Trainer
+
+The dedicated [Blackjack flash contract](BLACKJACK.md) adds the StickS3 trainer through the same signed, stable-release pipeline. Its card appears after the first complete release passes validation; no placeholder firmware is offered. Compatible Blackjack layouts receive an app-only update, preserving NVS and both journals. A layout migration backs up and initializes only newly claimed, precisely typed journal regions. Keep the resulting recovery file private: it may contain prior session data.
+
+The Blackjack browser installation/migration path is **Preview** pending physical browser qualification. Native tests and device validation of the firmware do not qualify the browser transport. Automatic discovery uses the existing scheduled workflow; a failed release check retains the last signed offering.
