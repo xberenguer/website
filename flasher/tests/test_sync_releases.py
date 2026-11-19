@@ -427,7 +427,25 @@ class BlackjackRoundAdapterTests(unittest.TestCase):
         self.assertEqual(wave['partitions'],S.BJ.WAVESHARE_PARTITIONS)
         c=S.apply_entries(self.catalog,entries);self.assertEqual(sum(p['id']=='blackjack'for p in c['projects']),1)
         self.assertEqual(len([r for r in c['releases']if r['project']=='blackjack']),2)
-        S.validate_files(ROOT,c,blobs,NODE)
+        # Bootstrap fixtures deliberately remove Blackjack from the catalog.
+        # Validate against that same isolated filesystem, not real release files
+        # the sync workflow has just staged under these immutable names.
+        with tempfile.TemporaryDirectory(prefix='blackjack-bootstrap-fixture-') as td:
+            root=Path(td)
+            (root/'package.json').write_text('{"type":"module"}')
+            for source in ROOT.glob('*.js'):
+                shutil.copy2(source,root/source.name)
+            shutil.copytree(ROOT/'vendor',root/'vendor')
+            for row in self.catalog['releases']+self.catalog.get('recoveryReleases',[]):
+                for f in row['files']:
+                    target=root/f['url'];target.parent.mkdir(parents=True,exist_ok=True)
+                    shutil.copy2(ROOT/f['url'],target)
+            S.validate_files(root,c,blobs,NODE)
+            # Isolation must never weaken production filename immutability.
+            target=root/entries[0]['files'][0]['url']
+            target.write_bytes(b'conflicting staged image')
+            with self.assertRaisesRegex(S.Invalid,'Immutable firmware filename'):
+                S.validate_files(root,c,blobs,NODE)
         self.assertEqual(S.apply_entries(c,entries),c)
 
     def test_round_target_addition_preserves_existing_stick_contract(self):
