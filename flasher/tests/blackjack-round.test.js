@@ -13,7 +13,14 @@ const name='blackjack-waveshare175c-0.12.0-app.bin';
 const app=new Uint8Array(529);app[0]=0xe9;app[3]=5<<4;app[12]=9;app.set(hex('3254cdab'),32);app.set(new TextEncoder().encode('0.12.0'),48);
 const files=new Map([[name,app]]);
 const release={id:'blackjack-waveshare175c-0.12.0',project:'blackjack',device:device.id,version:'0.12.0',contract:BLACKJACK_WAVESHARE_CONTRACT,status:'Preview',description:'Synthetic round test',qualification:'Synthetic offline fixture only',source:'https://github.com/xberenguer/blackjack-trainer',manual:'https://github.com/xberenguer/blackjack-trainer',files:[{id:name,url:'firmware/'+name,bytes:app.length,sha256:await sha256(app)}],parts:blackjackWaveshareParts(name,app.length),partitions:rows};
-const catalog={...base,releases:[...base.releases.filter(r=>!(r.project==='blackjack'&&r.device==='waveshare175c')),release]};
+// The synthetic release replaces this board in the test catalog. The same
+// version can already be archived when this test runs on a staged release.
+const isRoundBlackjack = row => row.project === 'blackjack' && row.device === 'waveshare175c';
+const catalog = {
+ ...base,
+ releases: [...base.releases.filter(row => !isRoundBlackjack(row)), release],
+ recoveryReleases: (base.recoveryReleases ?? []).filter(row => !isRoundBlackjack(row)),
+};
 class Loader {
  constructor(rs=rows){this.memory=new Uint8Array(device.flashBytes).fill(77);this.memory.set(table(rs),0x8000);this.IS_STUB=true;this.ESP_READ_FLASH=0xd2;this.writes=[];this.reads=[];this.packets=[];this.transport={read:async()=>this.packets.shift(),write:async()=>{}};}
  async checkCommand(_,op,r){assert.equal(op,0xd2);const v=new DataView(r.buffer,r.byteOffset);const at=v.getUint32(0,true),n=v.getUint32(4,true),size=v.getUint32(8,true),b=this.memory.slice(at,at+n);this.reads.push([at,n]);this.packets=[];for(let i=0;i<n;i+=size)this.packets.push(b.slice(i,i+size));this.packets.push(hex(md5Hex(b)));return 0;}
