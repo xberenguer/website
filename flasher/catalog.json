@@ -376,28 +376,28 @@
       }
     },
     {
-      "id": "stopwatch-waveshare175c-1.1.1",
+      "id": "stopwatch-waveshare175c-1.1.6",
       "project": "stopwatch",
       "device": "waveshare175c",
-      "version": "1.1.1",
-      "status": "Device verified",
-      "description": "Hold small at zero for screen off. Small wakes; large wakes and starts.",
-      "qualification": "Firmware installed and read-back verified on Waveshare 1.75C. Screen-off and both wake actions confirmed on the device. Browser write testing is pending.",
-      "source": "https://github.com/xberenguer/stopwatch/tree/0290c8b86ef16ab92b2467d5a4f4e616778edc5d",
-      "manual": "https://github.com/xberenguer/stopwatch/blob/0290c8b86ef16ab92b2467d5a4f4e616778edc5d/README.md",
+      "version": "1.1.6",
+      "status": "Published release",
+      "description": "A button-only stopwatch. Start, pause, lap and reset.",
+      "qualification": "Published stable release. Firmware checksum, embedded version and factory application layout verified. Physical and browser testing are separate.",
+      "source": "https://github.com/xberenguer/stopwatch/tree/d323a2443ff1a0b6f49aeba3d614129e26b23dcb",
+      "manual": "https://github.com/xberenguer/stopwatch/blob/v1.1.6/README.md",
       "files": [
         {
-          "id": "stopwatch-waveshare175c-1.1.1.bin",
-          "url": "firmware/stopwatch-waveshare175c-1.1.1.bin",
-          "bytes": 179984,
-          "sha256": "35bfa2c40fbc4a23da6aba321bf7fe05d838478b10b73a9680f0d8f7d9bf57eb"
+          "id": "stopwatch-waveshare175c-1.1.6.bin",
+          "url": "firmware/stopwatch-waveshare175c-1.1.6.bin",
+          "bytes": 182256,
+          "sha256": "f08ec2e4f217dafd001a15e9990bfae0d439f45836e626ae84ee5b162a5d9842"
         }
       ],
       "parts": [
         {
-          "file": "stopwatch-waveshare175c-1.1.1.bin",
+          "file": "stopwatch-waveshare175c-1.1.6.bin",
           "sourceOffset": 0,
-          "length": 179984,
+          "length": 182256,
           "address": 2097152,
           "kind": "application"
         }
@@ -459,7 +459,25 @@
           "label": "storage",
           "flags": 0
         }
-      ]
+      ],
+      "upstream": {
+        "repository": "xberenguer/stopwatch",
+        "tag": "v1.1.6",
+        "commit": "d323a2443ff1a0b6f49aeba3d614129e26b23dcb",
+        "releaseId": 452221145,
+        "assets": {
+          "stopwatch-app.bin": {
+            "id": 770240674,
+            "bytes": 182256,
+            "sha256": "f08ec2e4f217dafd001a15e9990bfae0d439f45836e626ae84ee5b162a5d9842"
+          },
+          "SHA256SUMS": {
+            "id": 770240743,
+            "bytes": 169,
+            "sha256": "116008b2646d85e1478b508e04e09418799f3e5b4ebc5401f8d5d0c3ad3e0a46"
+          }
+        }
+      }
     },
     {
       "id": "blackjack-sticks3-0.12.2",
@@ -3163,6 +3181,92 @@
           }
         }
       }
+    },
+    {
+      "id": "stopwatch-waveshare175c-1.1.1",
+      "project": "stopwatch",
+      "device": "waveshare175c",
+      "version": "1.1.1",
+      "status": "Device verified",
+      "description": "Hold small at zero for screen off. Small wakes; large wakes and starts.",
+      "qualification": "Firmware installed and read-back verified on Waveshare 1.75C. Screen-off and both wake actions confirmed on the device. Browser write testing is pending.",
+      "source": "https://github.com/xberenguer/stopwatch/tree/0290c8b86ef16ab92b2467d5a4f4e616778edc5d",
+      "manual": "https://github.com/xberenguer/stopwatch/blob/0290c8b86ef16ab92b2467d5a4f4e616778edc5d/README.md",
+      "files": [
+        {
+          "id": "stopwatch-waveshare175c-1.1.1.bin",
+          "url": "firmware/stopwatch-waveshare175c-1.1.1.bin",
+          "bytes": 179984,
+          "sha256": "35bfa2c40fbc4a23da6aba321bf7fe05d838478b10b73a9680f0d8f7d9bf57eb"
+        }
+      ],
+      "parts": [
+        {
+          "file": "stopwatch-waveshare175c-1.1.1.bin",
+          "sourceOffset": 0,
+          "length": 179984,
+          "address": 2097152,
+          "kind": "application"
+        }
+      ],
+      "partitions": [
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 36864,
+          "size": 204800,
+          "label": "nvsfactory",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 241664,
+          "size": 860160,
+          "label": "nvs",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 0,
+          "offset": 1101824,
+          "size": 8192,
+          "label": "otadata",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 1,
+          "offset": 1110016,
+          "size": 4096,
+          "label": "phy_init",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 130,
+          "offset": 1114112,
+          "size": 983040,
+          "label": "model",
+          "flags": 0
+        },
+        {
+          "type": 0,
+          "subtype": 0,
+          "offset": 2097152,
+          "size": 6291456,
+          "label": "factory",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 130,
+          "offset": 8388608,
+          "size": 8388608,
+          "label": "storage",
+          "flags": 0
+        }
+      ]
     }
   ]
 }
