@@ -89,8 +89,14 @@ class Provider:
                 assets['flasher-release.json']=S.encoded(dict(schemaVersion=1,project=project,repository=repo,tag=tag,commit=COMMIT,releases=rows))
                 assets['SHA256SUMS']=''.join(S.sha(b)+'  '+n+'\n' for n,b in assets.items()).encode()
             else:
-                r=old[0];ver='1.1.2';tag='v'+ver
-                b=(ROOT/r['files'][0]['url']).read_bytes();b=next_image(b,r['version'],ver,0)
+                r = old[0]
+                major, minor, patch_number = S.version(r['version'])[:3]
+                ver = f'{major}.{minor}.{patch_number + 1}'
+                tag = 'v' + ver
+                app = bytearray((ROOT / r['files'][0]['url']).read_bytes())
+                app[48:80] = ver.encode().ljust(32, b'\0')
+                repair_image(app, 0)
+                b = bytes(app)
                 assets={'stopwatch-app.bin':b,'SHA256SUMS':(S.sha(b)+'  stopwatch-app.bin\n').encode()}
             meta={'id':100+len(self.meta),'draft':False,'prerelease':False,'published_at':'2026-11-17T10:00:00Z',
                   'tag_name':tag,'target_commitish':COMMIT,'html_url':'https://github.com/'+repo+'/releases/tag/'+tag,'assets':[]}
