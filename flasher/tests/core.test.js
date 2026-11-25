@@ -86,12 +86,15 @@ test('Waveshare refuses a different table before mutation',async()=>{
   await assert.rejects(prepare(loader,r,d,{...identity,capacity:d.flashBytes},map),/Factory partition/);assert.equal(loader.writes.length,0);
 });
 test('signed Seeder opt-in recognizes the measured Voxel Flight table and backs up only the app',async()=>{
-  const ordinary=catalog.releases.find(r=>r.project==='seeder'&&r.device==='waveshare175c');
+  const {voxelFlightLayout:_,...ordinary}=catalog.releases.find(r=>r.project==='seeder'&&r.device==='waveshare175c');
   const alternate={...ordinary,voxelFlightLayout:true};
   const d=catalog.devices.find(d=>d.id===alternate.device);
   const id={...identity,capacity:d.flashBytes};
-  const fixture=structuredClone(catalog);
-  fixture.releases[fixture.releases.findIndex(r=>r.id===ordinary.id)]=alternate;
+  const unqualified=structuredClone(catalog);
+  const index=unqualified.releases.findIndex(r=>r.id===ordinary.id);
+  unqualified.releases[index]=ordinary;
+  const fixture=structuredClone(unqualified);
+  fixture.releases[index]=alternate;
   assert.equal(validateCatalog(fixture),fixture);
   const invalid=structuredClone(fixture);
   invalid.releases.find(r=>r.device==='sticks3').voxelFlightLayout=true;
@@ -121,7 +124,7 @@ test('signed Seeder opt-in recognizes the measured Voxel Flight table and backs 
   assert.equal(plan.replacingMap,false);
   assert.deepEqual(plan.ranges.map(r=>[r.address,r.after.length]),[[0x10000,roundUp(data.length)]]);
   const backup=await encodeBackup(plan);
-  await assert.rejects(decodeBackup(backup,catalog),/unsupported address/);
+  await assert.rejects(decodeBackup(backup,unqualified),/unsupported address/);
   const decoded=await decodeBackup(backup,fixture);
   const counterfeit={...plan};
   await assert.rejects(installTransaction(loader,counterfeit,async()=>id),/verified Voxel Flight application backup/);
