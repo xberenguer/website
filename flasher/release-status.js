@@ -1,6 +1,6 @@
 // Release metadata is advisory. Only the signed catalog authorizes firmware.
 import { validateBlackjack } from './blackjack.js';
-import { requireThat, permittedRange, roundUp } from './core.js';
+import { requireThat, permittedRange, roundUp, seederVoxelFlightRange } from './core.js';
 
 const id = value => typeof value === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,159}$/.test(value);
 const text = value => typeof value === 'string' && value.length > 0 && value.length <= 4096 && !/[\u0000-\u001f]/.test(value);
@@ -48,6 +48,7 @@ export function validateCatalog(catalog) {
     const parts = [...r.parts].sort((a,b) => a.address - b.address);
     requireThat(parts.every((p,i) => !i || p.address >= parts[i-1].address + roundUp(parts[i-1].length)), 'Overlapping firmware parts.');
     if (d.id === 'waveshare175c') requireThat(parts.length === 1 && parts[0].kind === 'application' && parts[0].address === 0x200000, 'Waveshare requires application-only firmware.');
+    seederVoxelFlightRange(r,d);
     unique(r.partitions, 'label', 'Invalid or duplicate partition labels.');
     requireThat(r.partitions.length > 0 && r.partitions.every(p => integer(p.type) && p.type <= 255 && integer(p.subtype) && p.subtype <= 255 && integer(p.flags) && p.flags <= 0xffffffff && integer(p.offset) && p.offset >= 0x9000 && integer(p.size) && p.size > 0 && p.offset % 4096 === 0 && p.size % 4096 === 0 && p.offset + p.size <= d.flashBytes), 'Invalid partition contract.');
   }

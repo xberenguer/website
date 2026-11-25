@@ -12,6 +12,9 @@ export const roundUp = value => Math.ceil(value / sector) * sector;
 const integer = value => Number.isSafeInteger(value) && value >= 0;
 const erased = bytes => bytes.every(b => b === 255);
 const recoveryAuthorities = new WeakMap();
+const voxelFlightTableSha256 = '71282a988ac14b25b9f7521929a33b6c86cd17f4a70e47b1bc6c34be248f96c8';
+const voxelFlightAppAddress = 0x10000;
+const voxelFlightAppCapacity = 0x500000;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8', { fatal: true });
 
@@ -63,6 +66,20 @@ export function permittedRange(device, address, length) {
   if (end > device.flashBytes) return false;
   return device.id === 'waveshare175c' ? address >= 0x200000 && end <= 0x800000 :
     device.id === 'sticks3' && ((address >= 0 && end <= 0x9000) || (address >= 0xe000 && end <= 0x7f0000));
+}
+// The signed release must explicitly authorize this exact alternate layout.
+// The sector hash pins all four rows, their MD5 record and erased padding.
+export function seederVoxelFlightRange(release, device) {
+  if (release.voxelFlightLayout === undefined) return null;
+  const part = release.parts?.[0], file = release.files?.[0];
+  requireThat(release.voxelFlightLayout === true && release.project === 'seeder'
+    && release.device === 'waveshare175c' && device.id === release.device && device.flashBytes === 0x2000000
+    && release.parts.length === 1 && release.files.length === 1 && part && file
+    && part.kind === 'application' && part.address === 0x200000 && part.sourceOffset === 0
+    && part.file === file.id && part.length === file.bytes && integer(part.length)
+    && part.length > 256 && roundUp(part.length) <= voxelFlightAppCapacity,
+    'Invalid Seeder Voxel Flight application contract.');
+  return { address:voxelFlightAppAddress, length:roundUp(part.length) };
 }
 export function validateParts(release, device, files) {
   validateBlackjack(release, device, files);
@@ -140,6 +157,8 @@ export async function readVerified(loader, address, length, progress = () => {},
 export async function inspectInstallation(loader, release, device, catalog, listener = () => {}) {
   const table=await readVerified(loader,0x8000,sector,()=>{},listener);
   const rows=parsePartitions(table,device.flashBytes);const matchingMap=samePartitions(rows,release.partitions);
+  const tableSha256=await sha256(table);
+  const voxelFlightLayout=!!seederVoxelFlightRange(release,device)&&tableSha256===voxelFlightTableSha256;
   let currentProject=null;
   if(matchingMap){
     const app=release.parts.find(p=>p.kind==='application');
@@ -157,8 +176,8 @@ export async function inspectInstallation(loader, release, device, catalog, list
       }
     }
   }
-  const reason=!matchingMap?'layout':currentProject&&currentProject!==release.project?'project':!currentProject?'unknown':null;
-  return {matchingMap,currentProject,reason,tableSha256:await sha256(table)};
+  const reason=voxelFlightLayout?'voxel-flight':!matchingMap?'layout':currentProject&&currentProject!==release.project?'project':!currentProject?'unknown':null;
+  return {matchingMap,voxelFlightLayout,currentProject,reason,tableSha256};
 }
 
 export async function prepare(loader, release, device, identity, files, progress = () => {}, listener = () => {}, options = { backup: true }) {
@@ -169,8 +188,12 @@ export async function prepare(loader, release, device, identity, files, progress
   const table = await readVerified(loader, 0x8000, sector,()=>{},listener);
   const rows = parsePartitions(table, device.flashBytes);
   const matchingMap = samePartitions(rows, release.partitions);
-  observe(listener,{type:'log',source:'CHECK',message:`Partition table checked · ${matchingMap?'matching layout':'layout replacement required'}`});
-  if (device.id === 'waveshare175c') requireThat(matchingMap, 'Factory partition map differs. This installer preserves the Waveshare factory layout; use the manual recovery guide.');
+  const tableSha256 = await sha256(table);
+  const alternateRange = seederVoxelFlightRange(release,device);
+  const voxelFlightLayout = !!alternateRange && tableSha256 === voxelFlightTableSha256;
+  observe(listener,{type:'log',source:'CHECK',message:`Partition table checked · ${voxelFlightLayout?'Voxel Flight layout, app only':matchingMap?'matching layout':'different layout'}`});
+  if (device.id === 'waveshare175c') requireThat(matchingMap || voxelFlightLayout, 'Factory partition map differs. This release does not support the connected Waveshare partition layout.');
+  if (voxelFlightLayout) parts = [{...parts[0],address:alternateRange.address}];
   if (isBlackjack(release)) {
     parts = matchingMap ? parts.filter(p => p.kind === 'application') : [...parts,...blackjackInitializations(release,rows)];
     requireThat(!rows.filter(r => r.type === 1 && r.subtype === 2).some(r => parts.some(p => p.address < r.offset+r.size && r.offset < p.address+roundUp(p.length))), 'Blackjack installation would overlap existing NVS. Use manual recovery.');
@@ -182,7 +205,7 @@ export async function prepare(loader, release, device, identity, files, progress
     if(differs)changed.push(part);
     observe(listener,{type:'log',source:'CHECK',message:`${part.kind} @ ${hexAddress(part.address)} · ${part.data.length} bytes · ${differs?'update required':'already matches; skipped'}`});
   }
-  const ranges = [];const captureBackup=options.backup!==false;
+  const ranges = [];const captureBackup=voxelFlightLayout||options.backup!==false;
   const backupBytes=changed.reduce((n,p)=>n+roundUp(p.data.length),0);let backedUp=0;
   for (let i = 0; i < changed.length; i++) {
     const part = changed[i];const length=roundUp(part.data.length);
@@ -204,8 +227,8 @@ export async function prepare(loader, release, device, identity, files, progress
     after.set(part.data);
     ranges.push({address:part.address,before,after,...(before?{sha256:await sha256(before)}:{}),md5,kind:part.kind});
   }
-  const plan = { identity: { ...identity }, release: release.id, device: device.id, tableSha256: await sha256(table), replacingMap: !matchingMap, backupCaptured:captureBackup, ranges };
-  recoveryAuthorities.set(plan, recoveryAuthority(release,device));
+  const plan = { identity: { ...identity }, release: release.id, device: device.id, tableSha256, replacingMap: !matchingMap&&!voxelFlightLayout, backupCaptured:captureBackup, ranges };
+  recoveryAuthorities.set(plan, voxelFlightLayout?[alternateRange]:recoveryAuthority(release,device));
   observe(listener,{type:'log',source:captureBackup?'BACKUP':'CHECK',level:'success',message:captureBackup?`${ranges.length} changed ranges backed up and verified · ${backupBytes} bytes. No flash written.`:`${ranges.length} changed ranges checked. Recovery backup skipped; no flash written.`});
   return plan;
 }
@@ -231,12 +254,14 @@ export async function decodeBackup(bytes, catalog) {
   // A saved recovery file must remain usable after its release leaves the UI.
   const release = [...catalog.releases, ...(catalog.recoveryReleases || [])]
     .find(r => r.id === manifest.release && r.device === manifest.device);
-  const authority = release && device ? recoveryAuthority(release,device) : [];
+  const alternate = release && device ? seederVoxelFlightRange(release,device) : null;
+  const usesAlternate = !!alternate && manifest.tableSha256 === voxelFlightTableSha256;
+  const authority = usesAlternate ? [alternate] : release && device ? recoveryAuthority(release,device) : [];
   requireThat(manifest.format === 1 && device && release && Array.isArray(manifest.ranges) && manifest.ranges.length > 0 && manifest.ranges.length <= authority.length, 'Unsupported recovery file.');
   validateIdentity(manifest.identity, device);
   let at = 12+size; const used = new Set(); const ranges = [];
   for (const r of manifest.ranges) {
-    requireThat(integer(r.address) && integer(r.length) && !used.has(r.address) && authority.some(p => p.address === r.address && p.length === r.length) && (permittedRange(device,r.address,r.length) || (isBlackjackStick(release) && r.address === 0x7f0000 && r.length === 0x2000)), 'Recovery file requests an unsupported address.');
+    requireThat(integer(r.address) && integer(r.length) && !used.has(r.address) && authority.some(p => p.address === r.address && p.length === r.length) && (usesAlternate || permittedRange(device,r.address,r.length) || (isBlackjackStick(release) && r.address === 0x7f0000 && r.length === 0x2000)), 'Recovery file requests an unsupported address.');
     used.add(r.address);
     requireThat(at+r.length <= bytes.length, 'Truncated recovery data.');
     const before = bytes.slice(at,at+r.length); at += r.length;
@@ -272,6 +297,15 @@ export async function writeRanges(loader, ranges, field, progress = () => {}, li
 export async function installTransaction(loader, plan, identify, progress = () => {}, listener = () => {}) {
   observe(listener,{type:'progress',phase:'check',label:'Rechecking device and flash before writing'});
   checkSameDevice(await identify(), plan.identity);
+  if (plan.device==='waveshare175c' && plan.ranges.some(r=>r.address===voxelFlightAppAddress)) {
+    const [range]=plan.ranges;
+    const authority=recoveryAuthorities.get(plan);
+    requireThat(plan.ranges.length===1 && authority?.length===1
+      && authority[0].address===range.address && authority[0].length===range.after.length
+      && range.before instanceof Uint8Array && range.before.length===range.after.length
+      && md5Hex(range.before)===range.md5 && plan.tableSha256===voxelFlightTableSha256,
+      'A verified Voxel Flight application backup is required.');
+  }
   // Detect an unexpected mutation between preparing and writing. No write on failure.
   for (const r of plan.ranges) requireThat((await loader.flashMd5sum(r.address,r.after.length)).toLowerCase() === r.md5, 'Flash changed after preparation. Prepare a new installation.');
   const currentTable = await readVerified(loader,0x8000,sector,()=>{},listener);
@@ -296,8 +330,14 @@ export async function installTransaction(loader, plan, identify, progress = () =
 export async function restoreTransaction(loader, plan, device, identify, progress = () => {}, listener = () => {}) {
   validateIdentity(plan.identity,device);
   checkSameDevice(await identify(),plan.identity);
-  requireThat(plan.ranges.length > 0 && plan.ranges.every(r => recoveryAuthorities.get(plan)?.some(p => p.address === r.address && p.length === r.before.length) && (permittedRange(device,r.address,r.before.length) || (device.id === 'sticks3' && recoveryAuthorities.get(plan)?.some(p => p.address === r.address && p.length === r.before.length) && r.address === 0x7f0000 && r.before.length === 0x2000)) && md5Hex(r.before) === r.md5), 'Invalid recovery ranges.');
+  const authority=recoveryAuthorities.get(plan);
+  const usesAlternate=device.id==='waveshare175c' && authority?.length===1 && authority[0].address===voxelFlightAppAddress;
+  requireThat(plan.ranges.length > 0 && plan.ranges.every(r => authority?.some(p => p.address === r.address && p.length === r.before.length) && (usesAlternate || permittedRange(device,r.address,r.before.length) || (device.id === 'sticks3' && r.address === 0x7f0000 && r.before.length === 0x2000)) && md5Hex(r.before) === r.md5), 'Invalid recovery ranges.');
+  if (usesAlternate) {
+    const table=await readVerified(loader,0x8000,sector,()=>{},listener);
+    requireThat(await sha256(table)===voxelFlightTableSha256, 'The Voxel Flight partition layout changed. No recovery data was written.');
+  }
   observe(listener,{type:'log',source:'CHECK',level:'success',message:'Recovery identity, range authority and backup checksums accepted.'});
-  // The live table may have been interrupted mid-write; never require it to parse here.
+  // Ordinary recovery also handles prior releases that changed the table itself.
   await writeRanges(loader,plan.ranges,'before',progress,listener,'restore');
 }

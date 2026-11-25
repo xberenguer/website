@@ -25,7 +25,7 @@ function lock(value) {
   for(const id of ['connect','prepare','save','install','restore','finish','restore-open','offer-backup'])$(id).disabled=value;
   if(!value){
     $('connect').disabled=!supportsUSB||!$('model-confirm').checked;
-    $('install').disabled=!connection||!identity||!!recoveryPlan;
+    $('install').disabled=!connection||!identity||!!recoveryPlan||(inspection?.voxelFlightLayout&&!saved);
     $('restore').disabled=!connection||!recoveryPlan;
     $('prepare').disabled=!connection||!!recoveryPlan||!resetOnClose;
     $('save').disabled=!plan?.backupCaptured;
@@ -36,10 +36,18 @@ function actions(...ids){for(const id of ['connect','install','restore','finish'
 function backupOffer(){
   const reason=inspection?.reason;const show=!!reason&&!saved&&!recoveryPlan;
   $('backup-offer').hidden=!show;if(!show)return;
+  if(inspection.voxelFlightLayout){
+    $('backup-offer-title').textContent=plan?.backupCaptured?'Recovery backup ready':'Voxel Flight layout detected';
+    $('backup-offer-message').textContent='Seeder will replace only the current app. The partition table and storage stay in place.';
+    $('offer-backup').textContent=plan?.backupCaptured?'Save backup':'Create backup';
+    $('backup-offer-hint').textContent='Save a recovery file before flashing.';
+    return;
+  }
   const titles={layout:'Storage layout will change',project:'A different project is installed',unknown:'Existing firmware is not recognized'};
   $('backup-offer-title').textContent=plan?.backupCaptured?'Recovery backup ready':titles[reason];
   $('backup-offer-message').textContent=plan?.backupCaptured?'Save the recovery file if you want to restore the previous firmware later.':reason==='layout'?'This installation replaces the current partition layout. A backup lets you put the overwritten sectors back.':reason==='project'?'This replaces a different application. A recovery backup lets you return to it.':'A recovery backup lets you put the overwritten sectors back if needed.';
   $('offer-backup').textContent=plan?.backupCaptured?'Save backup':'Back up first';
+  $('backup-offer-hint').textContent='Optional — you can continue with Flash firmware.';
 }
 function errorMessage(error) {
   return error?.name === 'NotFoundError' ? 'Connection cancelled. No flash was written.' : String(error?.message || error);
@@ -76,7 +84,7 @@ function openInstaller(r,restore) {
     const list=el('ul');for(const f of r.files){const item=el('li');item.append(link(f.id,f.url),el('p',`${f.bytes.toLocaleString()} bytes`),el('code',f.sha256));list.append(item);}details.append(list);
   }
   info.append(details);
-  $('recovery-guide').textContent=device.recovery;
+  $('recovery-guide').textContent=r.voxelFlightLayout?'Hold BOOT while powering or resetting, then release BOOT. Seeder checks the existing partition layout before writing.':device.recovery;
   $('model-label').textContent=`My connected device is exactly the ${device.name}${device.id==='waveshare175c'?' (C model)':' / K150'}.`;
   $('model-confirm').checked=false;$('installer-advanced').open=false;$('backup-offer').hidden=true;
   $('replace-warning').textContent=restore?'Restoring replaces the current firmware with your saved sectors. Use only your own recovery file.':r.project === 'blackjack'?'Installing restarts the device. Compatible Blackjack updates preserve progress. Replacing another project can overwrite its storage.':'Installing replaces the current project and restarts the device. Save any current seed first.';
@@ -91,9 +99,16 @@ $('connect').onclick=async()=>{
   try{
     const port=await portPromise;connection=new DeviceConnection(onEvent);identity=await connection.connect(port,device);
     // Recovery must also work with an interrupted/unparseable partition table.
-    if(!recoveryPlan){inspection=await inspectInstallation(connection.loader,release,device,catalog,onEvent);backupOffer();}
+    if(!recoveryPlan){
+      inspection=await inspectInstallation(connection.loader,release,device,catalog,onEvent);
+      if(device.id==='waveshare175c'&&inspection.reason==='layout'){
+        status('Unsupported partition layout','This release cannot use the app slot on the connected Waveshare. No flash was written.','error');
+        activity.fail();actions('finish');return;
+      }
+      backupOffer();
+    }
     activity.finish(0,'Device connected');
-    status('Device checked',`${identity.chip} · ${identity.capacity/1048576}MB flash. ${recoveryPlan?'Ready to restore your recovery file.':'Choose Flash firmware. Backup is optional in Advanced.'}`);
+    status('Device checked',`${identity.chip} · ${identity.capacity/1048576}MB flash. ${recoveryPlan?'Ready to restore your recovery file.':inspection.voxelFlightLayout?'Save a recovery file to enable Flash firmware.':'Choose Flash firmware. Backup is optional in Advanced.'}`);
     actions(recoveryPlan?'restore':'install','finish');
   }catch(e){try{await connection?.close();}catch{}connection=null;identity=null;status('Connection not completed',errorMessage(e),'error');activity.fail();actions('connect');}
   finally{lock(false);}
@@ -111,7 +126,7 @@ $('prepare').onclick=async()=>{
   try{
     await prepareInstallation(true);activity.finish(0,'Recovery data ready');
     if(!plan.ranges.length){status('This version is already installed','No changed sectors need a recovery backup.');actions('finish');}
-    else{status('Recovery backup ready','Save the recovery file below, or choose Flash firmware.');actions('install','finish');}
+    else{status('Recovery backup ready',inspection?.voxelFlightLayout?'Save the recovery file to enable Flash firmware.':'Save the recovery file below, or choose Flash firmware.');actions('install','finish');}
     backupOffer();
   }catch(e){plan=null;try{await connection?.close(true);}catch{}connection=null;identity=null;status('Backup stopped',errorMessage(e)+' No flash was written. Reconnect to continue.','error');activity.fail();actions('connect');}
   finally{lock(false);}
@@ -125,16 +140,21 @@ $('save').onclick=async()=>{
   try{
     const handle=handlePromise?await handlePromise:null;const bytes=await encodeBackup(plan);
     if(handle){const writer=await handle.createWritable();await writer.write(bytes);await writer.close();saved=true;status('Backup saved','The recovery file was saved on your computer.');}
-    else{const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));const a=link('',url);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);status('Backup download requested','Keep the recovery file if you want to restore this firmware later.');}
+    else{
+      const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));const a=link('',url);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
+      if(inspection?.voxelFlightLayout) saved=window.confirm('Has the recovery file downloaded? Confirm only after saving it to your computer.');
+      status(saved?'Backup saved':'Backup download requested',saved?'You can now flash Seeder.':'Keep the recovery file if you want to restore this firmware later.');
+    }
     activity.finish(0,'Optional backup ready');backupOffer();
   }catch(e){activity.fail();status(e.name==='AbortError'?'Backup save cancelled':'Backup could not be saved',e.name==='AbortError'?'You can save it again or continue with Flash firmware.':errorMessage(e),'warning');}
   finally{lock(false);}
 };
 $('install').onclick=async()=>{
-  if(busy||!connection||!identity||recoveryPlan)return;
+  if(busy||!connection||!identity||recoveryPlan||(inspection?.voxelFlightLayout&&!saved))return;
   lock(true);actions();$('backup-offer').hidden=true;activity.start('write','Checking firmware before flashing');
   try{
     await prepareInstallation(false);
+    requireThat(!inspection?.voxelFlightLayout||plan.backupCaptured,'Save a recovery file before flashing.');
     if(!plan.ranges.length){activity.finish(2,'Firmware already matches');status('This version is already installed',`The selected firmware already matches ${release.version}. No flash was written.`);actions('finish');return;}
     mutating=true;
     const result=await installTransaction(connection.loader,plan,()=>connection.identify(),()=>{},onEvent);

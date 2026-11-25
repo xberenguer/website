@@ -168,6 +168,25 @@ class SyncTests(unittest.TestCase):
         self.provider.change_manifest(lambda m:m.update(commit='a'*40))
         _,_,status=self.execute();self.assertIn('identity differs',self.blocked(status,'seeder')['message'])
 
+    def test_seeder_voxel_flight_approval_is_pinned_to_tested_bytes(self):
+        config=copy.deepcopy(self.config)
+        seeder=next(p for p in config['projects'] if p['project']=='seeder')
+        assets=self.provider.meta[seeder['repository']]['assets']
+        asset=next(a for a in assets if a['name'].startswith('seeder-waveshare175c-') and a['name'].endswith('.bin'))
+        firmware=self.provider.data[asset['browser_download_url']]
+        seeder['devices']['waveshare175c']['voxelFlightQualifiedSha256']=S.sha(firmware)
+        catalog,blobs,status=S.sync(ROOT,config,self.provider,NODE)
+        self.assertEqual(next(p for p in status['projects'] if p['project']=='seeder')['state'],'current')
+        wave=next(r for r in catalog['releases'] if r['project']=='seeder' and r['device']=='waveshare175c')
+        self.assertIs(wave['voxelFlightLayout'],True)
+        self.assertEqual(wave['parts'][0]['address'],0x200000)
+        S.validate_files(ROOT,catalog,blobs,NODE)
+        without_approval,_,_=self.execute()
+        self.assertIs(next(r for r in S.apply_entries(without_approval,[wave])['releases'] if r['id']==wave['id'])['voxelFlightLayout'],True)
+        seeder['devices']['waveshare175c']['voxelFlightQualifiedSha256']='0'*64
+        unqualified,_,_=S.sync(ROOT,config,self.provider,NODE)
+        self.assertNotIn('voxelFlightLayout',next(r for r in unqualified['releases'] if r['id']==wave['id']))
+
     def test_failed_or_missing_automated_gate_is_blocked(self):
         for index,conclusion in [(0,'failure'),(1,'failure'),(2,None)]:
             def mutate(repo,endpoint,result):

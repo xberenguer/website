@@ -55,7 +55,7 @@ export class ActivityPanel {
   }
   start(phase,label){this.operation=phase;this.phase=null;this.active=true;this.$('activity-state').textContent='Live';this.$('status-box').dataset.state='busy';this.event({type:'progress',phase,label});}
   finish(step,label){this.active=false;this.log.flush();this.step(step,true);this.$('progress').value=1;this.$('progress-value').textContent='100%';this.$('progress-label').textContent=label;this.$('status-box').dataset.state='success';this.$('activity-state').textContent=step===2?'Complete':'Ready';this.renderTime();}
-  fail(){this.active=false;this.log.flush();this.$('status-box').dataset.state='error';this.$('activity-state').textContent='Stopped';const current=this.$('install-steps').querySelector('[aria-current]');if(current)current.dataset.state='error';this.renderTime();}
+  fail(){this.active=false;this.log.flush();this.$('status-box').dataset.state='error';this.$('activity-state').textContent='Stopped';this.$('progress-value').textContent='Stopped';this.$('progress').hidden=true;const current=this.$('install-steps').querySelector('[aria-current]');if(current)current.dataset.state='error';this.renderTime();}
   event(event){
     if(event.type==='terminal'){this.log.terminal(event.text,event.newline);return;}
     if(event.type==='log'){this.log.add(event.message,event.level||'info',event.source||'FLASHER');return;}

@@ -41,6 +41,7 @@
           ]
         },
         "waveshare175c": {
+          "voxelFlightQualifiedSha256": "96f288f42964a7d96a15d6957c8c983e7d31f5993a30b75298083e2969738092",
           "partitions": [
             {
               "type": 1,

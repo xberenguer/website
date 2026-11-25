@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { md5Hex,sha256,parsePartitions,samePartitions,validateIdentity,checkSameDevice,permittedRange,validateParts,fetchFiles,readVerified,inspectInstallation,prepare,encodeBackup,decodeBackup,installTransaction,restoreTransaction,roundUp } from '../core.js';
+import { validateCatalog } from '../release-status.js';
 const catalog=JSON.parse(await readFile(new URL('../catalog.json',import.meta.url)));
 const encoder=new TextEncoder();
 const device=catalog.devices[0], release=catalog.releases[0];
@@ -83,6 +84,60 @@ test('preparation preserves sector tails and backs up only changed ranges',async
 test('Waveshare refuses a different table before mutation',async()=>{
   const r=catalog.releases[1],d=catalog.devices[1],f=r.files[0];const map=new Map([[f.id,new Uint8Array(await readFile(new URL('../'+f.url,import.meta.url)))]]);const loader=new FakeLoader();
   await assert.rejects(prepare(loader,r,d,{...identity,capacity:d.flashBytes},map),/Factory partition/);assert.equal(loader.writes.length,0);
+});
+test('signed Seeder opt-in recognizes the measured Voxel Flight table and backs up only the app',async()=>{
+  const ordinary=catalog.releases.find(r=>r.project==='seeder'&&r.device==='waveshare175c');
+  const alternate={...ordinary,voxelFlightLayout:true};
+  const d=catalog.devices.find(d=>d.id===alternate.device);
+  const id={...identity,capacity:d.flashBytes};
+  const fixture=structuredClone(catalog);
+  fixture.releases[fixture.releases.findIndex(r=>r.id===ordinary.id)]=alternate;
+  assert.equal(validateCatalog(fixture),fixture);
+  const invalid=structuredClone(fixture);
+  invalid.releases.find(r=>r.device==='sticks3').voxelFlightLayout=true;
+  assert.throws(()=>validateCatalog(invalid),/Invalid Seeder Voxel Flight/);
+  const rows=[
+    [1,2,0x9000,0x6000,'nvs'],[1,1,0xf000,0x1000,'phy_init'],
+    [0,0,0x10000,0x500000,'factory'],[1,129,0x510000,0x1af0000,'storage']
+  ].map(([type,subtype,offset,size,label])=>({type,subtype,offset,size,label,flags:0}));
+  const loader=new FakeLoader(d,{partitions:rows});
+  const tableHash='71282a988ac14b25b9f7521929a33b6c86cd17f4a70e47b1bc6c34be248f96c8';
+  assert.equal(await sha256(loader.memory.subarray(0x8000,0x9000)),tableHash);
+  const [f]=alternate.files;
+  const data=new Uint8Array(await readFile(new URL('../'+f.url,import.meta.url)));
+  const map=new Map([[f.id,data]]);
+  await assert.rejects(prepare(loader,ordinary,d,id,map),/Factory partition map differs/);
+  loader.memory.set(table(rows,false),0x8000);
+  await assert.rejects(prepare(loader,alternate,d,id,map),/Factory partition map differs/);
+  loader.memory.set(table(rows),0x8000);
+  assert.equal((await inspectInstallation(loader,alternate,d,fixture)).reason,'voxel-flight');
+  assert.deepEqual(loader.writes,[]);
+  loader.memory.fill(0x5a,0x9000,0x10000);
+  loader.memory.fill(0x50,0x10000,0x510000);
+  loader.memory[0x510000]=0x51;
+  const before=loader.memory.slice();
+  const plan=await prepare(loader,alternate,d,id,map,()=>{},()=>{},{backup:false});
+  assert.equal(plan.backupCaptured,true);
+  assert.equal(plan.replacingMap,false);
+  assert.deepEqual(plan.ranges.map(r=>[r.address,r.after.length]),[[0x10000,roundUp(data.length)]]);
+  const backup=await encodeBackup(plan);
+  await assert.rejects(decodeBackup(backup,catalog),/unsupported address/);
+  const decoded=await decodeBackup(backup,fixture);
+  const counterfeit={...plan};
+  await assert.rejects(installTransaction(loader,counterfeit,async()=>id),/verified Voxel Flight application backup/);
+  loader.failOnce=true;
+  assert.equal((await installTransaction(loader,plan,async()=>id)).restored,true);
+  assert.deepEqual(loader.memory,before);
+  assert.equal((await installTransaction(loader,plan,async()=>id)).installed,true);
+  assert.deepEqual(loader.memory.subarray(0x10000,0x10000+data.length),data);
+  assert.deepEqual(loader.memory.subarray(0,0x10000),before.subarray(0,0x10000));
+  assert.deepEqual(loader.memory.subarray(0x10000+data.length),before.subarray(0x10000+data.length));
+  loader.memory.set(table(ordinary.partitions),0x8000);
+  await assert.rejects(restoreTransaction(loader,decoded,d,async()=>id),/layout changed/);
+  loader.memory.set(table(rows),0x8000);
+  await restoreTransaction(loader,decoded,d,async()=>id);
+  assert.deepEqual(loader.memory,before);
+  assert.deepEqual(loader.writes,[[0x10000],[0x10000],[0x10000],[0x10000]]);
 });
 test('private backup roundtrip validates hashes, permitted offsets and trailing bytes',async()=>{
   const loader=new FakeLoader();const plan=await prepare(loader,release,device,identity,files);const bytes=await encodeBackup(plan);const decoded=await decodeBackup(bytes,catalog);assert.deepEqual(decoded.ranges[0].before,plan.ranges[0].before);

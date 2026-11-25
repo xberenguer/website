@@ -235,6 +235,14 @@ def manifest_releases(config, meta, commit, provider, old):
             upstream=provenance(repo,tag,commit,meta,[(ma,raw),(a,b)]))
         # Old eligibility descriptions describe an obsolete build, not the project.
         entry['description'] = 'Offline coin/dice seed generation with address QR and cancellable reset.'
+        qualified = config['devices'][device].get('voxelFlightQualifiedSha256')
+        if qualified is not None:
+            need(config['project'] == 'seeder' and device == 'waveshare175c'
+                 and isinstance(qualified,str) and re.fullmatch(r'[a-f0-9]{64}',qualified),
+                 'Invalid Seeder Voxel Flight application approval')
+        if qualified == sha(b):
+            need(len(b) <= 0x500000,'Seeder application exceeds the Voxel Flight slot')
+            entry['voxelFlightLayout'] = True
         result.append(entry); blobs['firmware/'+name] = b
     return result, blobs
 
@@ -304,6 +312,9 @@ def apply_entries(catalog, entries):
                     if key in old['upstream']: need(old['upstream'][key] == new['upstream'].get(key), 'Same version upstream identity changed')
                 for name,a in old['upstream'].get('assets',{}).items():
                     need(a == new['upstream'].get('assets',{}).get(name), 'Same version asset identity changed')
+            # A newly qualified layout may be added without replacing any asset.
+            if new.get('voxelFlightLayout'):
+                old['voxelFlightLayout'] = True
             continue
         archive=result.setdefault('recoveryReleases',[])
         need(not any(r['id'] == new['id'] for r in archive), 'New release already archived; refusing replay')
