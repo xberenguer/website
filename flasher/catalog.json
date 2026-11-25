@@ -28,6 +28,13 @@
       "name": "Blackjack Trainer",
       "category": "Training",
       "url": "https://github.com/xberenguer/blackjack-trainer"
+    },
+    {
+      "id": "scenic-flight",
+      "name": "Scenic Flight",
+      "category": "Games",
+      "summary": "Hands-off flight through seeded landscapes.",
+      "url": "https://xberenguer.github.io/scenic-flight/"
     }
   ],
   "devices": [
@@ -735,6 +742,87 @@
             "id": 769998469,
             "bytes": 373,
             "sha256": "1f28a14f8b4a16274bee3de2ebfd73a1c785a59387916b20fad60946bffcff78"
+          }
+        }
+      }
+    },
+    {
+      "id": "scenic-flight-waveshare175c-0.1.0",
+      "project": "scenic-flight",
+      "device": "waveshare175c",
+      "version": "0.1.0",
+      "status": "Published release",
+      "description": "Hands-off flight through seeded landscapes.",
+      "qualification": "App-only firmware for the measured Voxel Flight partition layout.",
+      "source": "https://github.com/xberenguer/scenic-flight/tree/12cef13fffade3152ed0cce7a5a5ec869f4ba9f1",
+      "manual": "https://github.com/xberenguer/scenic-flight/blob/v0.1.0/README.md",
+      "files": [
+        {
+          "id": "scenic-flight-waveshare175c-0.1.0.bin",
+          "url": "firmware/scenic-flight-waveshare175c-0.1.0.bin",
+          "bytes": 1920288,
+          "sha256": "ab25c039347656b6af07da7c6ded2148a01e2b0caf11be088c89bc59ef89ee6f"
+        }
+      ],
+      "parts": [
+        {
+          "file": "scenic-flight-waveshare175c-0.1.0.bin",
+          "sourceOffset": 0,
+          "length": 1920288,
+          "address": 65536,
+          "kind": "application"
+        }
+      ],
+      "partitions": [
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 36864,
+          "size": 24576,
+          "label": "nvs",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 1,
+          "offset": 61440,
+          "size": 4096,
+          "label": "phy_init",
+          "flags": 0
+        },
+        {
+          "type": 0,
+          "subtype": 0,
+          "offset": 65536,
+          "size": 5242880,
+          "label": "factory",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 129,
+          "offset": 5308416,
+          "size": 28246016,
+          "label": "storage",
+          "flags": 0
+        }
+      ],
+      "voxelFlightLayout": true,
+      "upstream": {
+        "repository": "xberenguer/scenic-flight",
+        "tag": "v0.1.0",
+        "commit": "12cef13fffade3152ed0cce7a5a5ec869f4ba9f1",
+        "releaseId": 457853087,
+        "assets": {
+          "scenic-flight-waveshare175c-app.bin": {
+            "id": 790789127,
+            "bytes": 1920288,
+            "sha256": "ab25c039347656b6af07da7c6ded2148a01e2b0caf11be088c89bc59ef89ee6f"
+          },
+          "SHA256SUMS": {
+            "id": 790789195,
+            "bytes": 102,
+            "sha256": "9a894a3e4f0fffe4910b01e35f04df1e590275c63c66834c66a4d0e887d077a5"
           }
         }
       }
