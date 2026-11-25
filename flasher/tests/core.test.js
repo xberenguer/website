@@ -85,6 +85,40 @@ test('Waveshare refuses a different table before mutation',async()=>{
   const r=catalog.releases[1],d=catalog.devices[1],f=r.files[0];const map=new Map([[f.id,new Uint8Array(await readFile(new URL('../'+f.url,import.meta.url)))]]);const loader=new FakeLoader();
   await assert.rejects(prepare(loader,r,d,{...identity,capacity:d.flashBytes},map),/Factory partition/);assert.equal(loader.writes.length,0);
 });
+test('Scenic Flight requires the exact app slot and recovery backup', async () => {
+  const d = catalog.devices.find(device => device.id === 'waveshare175c');
+  const id = {...identity, capacity:d.flashBytes};
+  const rows = [
+    [1,2,0x9000,0x6000,'nvs'],[1,1,0xf000,0x1000,'phy_init'],
+    [0,0,0x10000,0x500000,'factory'],[1,129,0x510000,0x1af0000,'storage']
+  ].map(([type,subtype,offset,size,label]) => ({type,subtype,offset,size,label,flags:0}));
+  const older = catalog.releases.find(release => release.project === 'stopwatch');
+  const file = older.files[0];
+  const app = new Uint8Array(await readFile(new URL('../' + file.url, import.meta.url)));
+  const scenic = {...older, id:'scenic-flight-test', project:'scenic-flight', voxelFlightLayout:true,
+    partitions:rows, parts:[{...older.parts[0], address:0x10000}]};
+  const map = new Map([[file.id, app]]);
+  const fixture = {...catalog, projects:[...catalog.projects.filter(p => p.id !== scenic.project),
+    {id:scenic.project, name:'Scenic Flight', category:'Games'}],
+    releases:[...catalog.releases.filter(r => r.project !== scenic.project), scenic]};
+  validateCatalog(fixture);
+  assert.throws(() => validateParts({...scenic, voxelFlightLayout:false}, d, map), /Scenic Flight application contract/);
+  const loader = new FakeLoader(d, scenic);
+  loader.memory.set(table(rows, false), 0x8000);
+  await assert.rejects(prepare(loader, scenic, d, id, map), /verified Voxel Flight partition table/);
+  assert.deepEqual(loader.writes, []);
+  loader.memory.set(table(rows), 0x8000);
+  const plan = await prepare(loader, scenic, d, id, map, () => {}, () => {}, {backup:false});
+  assert.equal(plan.backupCaptured, true);
+  assert.equal(plan.replacingMap, false);
+  assert.deepEqual(plan.ranges.map(range => range.address), [0x10000]);
+  const recovery = await decodeBackup(await encodeBackup(plan), fixture);
+  assert.deepEqual(recovery.ranges.map(range => range.address), [0x10000]);
+  assert.equal((await installTransaction(loader, plan, async () => id)).installed, true);
+  assert.deepEqual(loader.writes, [[0x10000]]);
+  assert.deepEqual(loader.memory.subarray(0x8000, 0x9000), table(rows));
+});
+
 test('signed Seeder opt-in recognizes the measured Voxel Flight table and backs up only the app',async()=>{
   const {voxelFlightLayout:_,...ordinary}=catalog.releases.find(r=>r.project==='seeder'&&r.device==='waveshare175c');
   const alternate={...ordinary,voxelFlightLayout:true};

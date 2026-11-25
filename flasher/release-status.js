@@ -1,6 +1,6 @@
 // Release metadata is advisory. Only the signed catalog authorizes firmware.
 import { validateBlackjack } from './blackjack.js';
-import { requireThat, permittedRange, roundUp, seederVoxelFlightRange } from './core.js';
+import { requireThat, permittedRange, roundUp, voxelFlightAppRange } from './core.js';
 
 const id = value => typeof value === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,159}$/.test(value);
 const text = value => typeof value === 'string' && value.length > 0 && value.length <= 4096 && !/[\u0000-\u001f]/.test(value);
@@ -41,14 +41,15 @@ export function validateCatalog(catalog) {
     unique(r.files, 'id', 'Invalid or duplicate firmware file IDs.');
     requireThat(r.files.length > 0 && r.files.every(f => /^[a-zA-Z0-9._-]+\.bin$/.test(f.id) && f.url === `firmware/${f.id}` && integer(f.bytes) && f.bytes > 0 && f.bytes <= d.flashBytes && /^[a-f0-9]{64}$/.test(f.sha256)), 'Invalid firmware file contract.');
     requireThat(Array.isArray(r.parts) && r.parts.length > 0 && r.parts.length <= 16, 'Missing firmware parts.');
+    const voxelRange = voxelFlightAppRange(r,d);
+    const scenicRange = r.project === 'scenic-flight' ? voxelRange : null;
     for (const part of r.parts) {
       const file = r.files.find(f => f.id === part.file);
-      requireThat(file && integer(part.sourceOffset) && integer(part.length) && part.length > 0 && part.sourceOffset + part.length <= file.bytes && permittedRange(d, part.address, roundUp(part.length)) && ['application','bootloader','partitions','ota','assets'].includes(part.kind), 'Invalid firmware part contract.');
+      requireThat(file && integer(part.sourceOffset) && integer(part.length) && part.length > 0 && part.sourceOffset + part.length <= file.bytes && (scenicRange || permittedRange(d, part.address, roundUp(part.length))) && ['application','bootloader','partitions','ota','assets'].includes(part.kind), 'Invalid firmware part contract.');
     }
     const parts = [...r.parts].sort((a,b) => a.address - b.address);
     requireThat(parts.every((p,i) => !i || p.address >= parts[i-1].address + roundUp(parts[i-1].length)), 'Overlapping firmware parts.');
-    if (d.id === 'waveshare175c') requireThat(parts.length === 1 && parts[0].kind === 'application' && parts[0].address === 0x200000, 'Waveshare requires application-only firmware.');
-    seederVoxelFlightRange(r,d);
+    if (d.id === 'waveshare175c') requireThat(parts.length === 1 && parts[0].kind === 'application' && parts[0].address === (scenicRange?.address ?? 0x200000), 'Waveshare requires application-only firmware.');
     unique(r.partitions, 'label', 'Invalid or duplicate partition labels.');
     requireThat(r.partitions.length > 0 && r.partitions.every(p => integer(p.type) && p.type <= 255 && integer(p.subtype) && p.subtype <= 255 && integer(p.flags) && p.flags <= 0xffffffff && integer(p.offset) && p.offset >= 0x9000 && integer(p.size) && p.size > 0 && p.offset % 4096 === 0 && p.size % 4096 === 0 && p.offset + p.size <= d.flashBytes), 'Invalid partition contract.');
   }

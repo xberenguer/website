@@ -61,6 +61,18 @@ class Provider:
                 assets[S.P.APP]=(ROOT/r['files'][0]['url']).read_bytes()
                 assets[S.P.ASSETS]=(ROOT/r['files'][1]['url']).read_bytes()
                 assets[S.P.SUMS]=(''.join(S.sha(b)+'  '+name+'\n' for name,b in assets.items())).encode()
+            elif project == 'scenic-flight':
+                old_ver = old[0]['version'] if old else '0.0.0'
+                major, minor, patch_number = S.version(old_ver)[:3]
+                ver = f'{major}.{minor}.{patch_number + 1}'
+                tag = 'v' + ver
+                ref = next(r for r in catalog['releases'] if r['project'] == 'stopwatch')
+                app = bytearray((ROOT / ref['files'][0]['url']).read_bytes())
+                app[48:80] = ver.encode().ljust(32, b'\0')
+                app[80:112] = b'scenic-flight-waveshare'.ljust(32, b'\0')
+                repair_image(app, 0)
+                b = bytes(app)
+                assets = {S.SCENIC_APP: b, 'SHA256SUMS': (S.sha(b) + '  ' + S.SCENIC_APP + '\n').encode()}
             elif project=='blackjack':
                 ver='0.11.3'
                 if old:
@@ -146,9 +158,22 @@ class SyncTests(unittest.TestCase):
         self.assertTrue(all(s['state']=='current' for s in status['projects']))
         for old in self.catalog['releases']:
             self.assertIn(old,c['recoveryReleases'])
-        self.assertEqual(len(c['releases']),len(self.catalog['releases'])+(0 if any(r['project']=='blackjack' for r in self.catalog['releases']) else 1))
+        self.assertEqual(len(c['releases']),len(self.catalog['releases']) + len({'blackjack', 'scenic-flight'} - {r['project'] for r in self.catalog['releases']}))
         self.assertGreaterEqual(len(blobs),5)
         S.validate_files(ROOT,c,blobs,NODE)
+
+    def test_scenic_flight_uses_only_the_verified_legacy_app_slot(self):
+        project = next(c for c in self.config['projects'] if c['project'] == 'scenic-flight')
+        meta = self.provider.meta[project['repository']]
+        entries, _ = S.scenic_releases(project, meta, COMMIT, self.provider)
+        release = entries[0]
+        self.assertEqual(release['parts'][0]['address'], 0x10000)
+        self.assertTrue(release['voxelFlightLayout'])
+        self.assertEqual(release['partitions'], S.SCENIC_PARTITIONS)
+        invalid = copy.deepcopy(project)
+        invalid['devices']['waveshare175c']['partitions'][2]['offset'] = 0x200000
+        with self.assertRaisesRegex(S.Invalid, 'partition map'):
+            S.scenic_releases(invalid, meta, COMMIT, self.provider)
 
     def test_incomplete_seeder_does_not_block_other_projects(self):
         self.provider.change_manifest(lambda m:m['releases'].pop())

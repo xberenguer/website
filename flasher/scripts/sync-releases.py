@@ -36,7 +36,19 @@ Invalid = P.Invalid
 need = P.need
 sha = P.sha
 REPOSITORIES = {'seeder': 'xberenguer/Seeder-Fork', 'phoenix': P.REPO,
-                'stopwatch': 'xberenguer/stopwatch', 'blackjack':'xberenguer/blackjack-trainer'}
+                'stopwatch': 'xberenguer/stopwatch', 'blackjack':'xberenguer/blackjack-trainer',
+                'scenic-flight': 'xberenguer/scenic-flight'}
+SCENIC_PROJECT = {'id': 'scenic-flight', 'name': 'Scenic Flight', 'category': 'Games',
+                  'summary': 'Hands-off flight through seeded landscapes.',
+                  'url': 'https://xberenguer.github.io/scenic-flight/'}
+SCENIC_APP = 'scenic-flight-waveshare175c-app.bin'
+SCENIC_PARTITIONS = [
+    {'type': t, 'subtype': s, 'offset': offset, 'size': size, 'label': label, 'flags': 0}
+    for t, s, offset, size, label in [
+        (1, 2, 0x9000, 0x6000, 'nvs'), (1, 1, 0xf000, 0x1000, 'phy_init'),
+        (0, 0, 0x10000, 0x500000, 'factory'), (1, 129, 0x510000, 0x1af0000, 'storage'),
+    ]
+]
 TRUSTED_FINGERPRINT = '34568ae48435426bb68028eb6f3bb338a2cba5115c906a33ca26c3592c31c5d4'
 
 
@@ -247,7 +259,41 @@ def manifest_releases(config, meta, commit, provider, old):
     return result, blobs
 
 
+def scenic_releases(config, meta, commit, provider):
+    repo = config['repository']
+    tag = meta['tag_name']
+    ver = tag[1:]
+    version(ver)
+    need(equal(config['devices'], {'waveshare175c': {'partitions': SCENIC_PARTITIONS}}),
+         'Scenic Flight partition map differs from the approved layout')
+    app, asset = asset_bytes(provider, meta, SCENIC_APP, 0x500000)
+    checks, checks_asset = asset_bytes(provider, meta, 'SHA256SUMS', 65536)
+    need(P.sums(checks).get(SCENIC_APP) == sha(app), 'Scenic Flight release checksum mismatch')
+    end = image(app, 0, len(app), 0x2000000)
+    need(all(value == 255 for value in app[end:]), 'Unexpected data after Scenic Flight application')
+    need(app[32:36] == bytes.fromhex('3254cdab')
+         and app[48:80].split(b'\0', 1)[0] == ver.encode()
+         and app[80:112].split(b'\0', 1)[0] == b'scenic-flight-waveshare',
+         'Scenic Flight embedded project or version differs')
+    name = f'scenic-flight-waveshare175c-{ver}.bin'
+    file = {'id': name, 'url': 'firmware/' + name, 'bytes': len(app), 'sha256': sha(app)}
+    entry = {
+        'id': 'scenic-flight-waveshare175c-' + ver, 'project': 'scenic-flight',
+        'device': 'waveshare175c', 'version': ver, 'status': 'Published release',
+        'description': 'Hands-off flight through seeded landscapes.',
+        'qualification': 'App-only firmware for the measured Voxel Flight partition layout.',
+        'source': 'https://github.com/' + repo + '/tree/' + commit,
+        'manual': 'https://github.com/' + repo + '/blob/' + tag + '/README.md',
+        'files': [file],
+        'parts': [{'file': name, 'sourceOffset': 0, 'length': len(app), 'address': 0x10000, 'kind': 'application'}],
+        'partitions': SCENIC_PARTITIONS, 'voxelFlightLayout': True,
+        'upstream': provenance(repo, tag, commit, meta, [(asset, app), (checks_asset, checks)]),
+    }
+    return [entry], {file['url']: app}
+
+
 def adapter_releases(config, meta, commit, provider, old):
+    if config['adapter'] == 'scenic-flight': return scenic_releases(config,meta,commit,provider)
     if config['adapter'] == 'blackjack': return BJ.releases(SimpleNamespace(**globals()),config,meta,commit,provider)
     if config['adapter'] == 'manifest': return manifest_releases(config,meta,commit,provider,old)
     repo=config['repository']; tag=meta['tag_name']
@@ -283,6 +329,13 @@ def apply_entries(catalog, entries):
     result=copy.deepcopy(catalog)
     for new in entries:
         slots=[(i,r) for i,r in enumerate(result['releases']) if r['project'] == new['project'] and r['device'] == new['device']]
+        if not slots and new['project'] == 'scenic-flight':
+            need(not any(p['id'] == 'scenic-flight' for p in result['projects'])
+                 and not any(r['project'] == 'scenic-flight' for r in result.get('recoveryReleases', [])),
+                 'Partial Scenic Flight bootstrap is not allowed')
+            result['projects'].append(copy.deepcopy(SCENIC_PROJECT))
+            result['releases'].append(copy.deepcopy(new))
+            continue
         if not slots and new['project'] == 'blackjack' and new['device'] == 'sticks3':
             need(not any(r['project'] == 'blackjack' for r in result['releases']+result.get('recoveryReleases',[])) and not any(p['id'] == 'blackjack' for p in result['projects']), 'Partial Blackjack bootstrap is not allowed')
             result['projects'].append(copy.deepcopy(BJ.PROJECT))
@@ -400,7 +453,7 @@ def sync(root, config, provider, node):
             commit=source_commit(provider,repo,tag)
             successful_checks(provider,repo,commit,c.get('requiredChecks',[]))
             old={r['device']:r for r in updated['releases'] if r['project'] == project}
-            need(set(old) == set(c['devices']) or (project == 'blackjack' and set(old).issubset(c['devices'])),'Configured devices differ from catalog')
+            need(set(old) == set(c['devices']) or (project in {'blackjack', 'scenic-flight'} and set(old).issubset(c['devices'])),'Configured devices differ from catalog')
             entries,data=adapter_releases(c,meta,commit,provider,old)
             proposed=apply_entries(updated,entries)
             validate_files(root,proposed,{**blobs,**data},node)

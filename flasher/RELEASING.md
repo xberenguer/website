@@ -52,3 +52,7 @@ python3 flasher/scripts/verify-live.py --url https://xn--sg8hhb.ws/flasher/
 ```
 
 `--check` is read-only. Staging requires a new directory outside the website checkout and the signing key in the named environment variable. Never put the private key in a command argument, release asset, repository or browser bundle. Secure Boot/eFuses are unrelated and remain unchanged.
+
+## Publish Scenic Flight
+
+Publish a stable `vX.Y.Z` release from `xberenguer/scenic-flight` with `scenic-flight-waveshare175c-app.bin` and `SHA256SUMS`. The ESP image must contain the release version and the `scenic-flight-waveshare` application name. The flasher offers it for the measured Voxel Flight partition layout only. It backs up the app at `0x10000` before replacing it and preserves the partition table and storage. A standard factory-layout Waveshare needs a separately qualified release.

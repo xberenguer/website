@@ -69,25 +69,28 @@ export function permittedRange(device, address, length) {
 }
 // The signed release must explicitly authorize this exact alternate layout.
 // The sector hash pins all four rows, their MD5 record and erased padding.
-export function seederVoxelFlightRange(release, device) {
-  if (release.voxelFlightLayout === undefined) return null;
+export function voxelFlightAppRange(release, device) {
+  const scenic = release.project === 'scenic-flight';
+  if (!scenic && release.voxelFlightLayout === undefined) return null;
   const part = release.parts?.[0], file = release.files?.[0];
-  requireThat(release.voxelFlightLayout === true && release.project === 'seeder'
+  const expectedAddress = scenic ? voxelFlightAppAddress : 0x200000;
+  requireThat(release.voxelFlightLayout === true && (scenic || release.project === 'seeder')
     && release.device === 'waveshare175c' && device.id === release.device && device.flashBytes === 0x2000000
     && release.parts.length === 1 && release.files.length === 1 && part && file
-    && part.kind === 'application' && part.address === 0x200000 && part.sourceOffset === 0
+    && part.kind === 'application' && part.address === expectedAddress && part.sourceOffset === 0
     && part.file === file.id && part.length === file.bytes && integer(part.length)
     && part.length > 256 && roundUp(part.length) <= voxelFlightAppCapacity,
-    'Invalid Seeder Voxel Flight application contract.');
+    scenic ? 'Invalid Scenic Flight application contract.' : 'Invalid Seeder Voxel Flight application contract.');
   return { address:voxelFlightAppAddress, length:roundUp(part.length) };
 }
 export function validateParts(release, device, files) {
   validateBlackjack(release, device, files);
   requireThat(release.device === device.id, 'Release and device do not match.');
+  const scenicRange = release.project === 'scenic-flight' ? voxelFlightAppRange(release,device) : null;
   const parts = release.parts.map(p => {
     const source = files.get(p.file);
     requireThat(source instanceof Uint8Array && integer(p.sourceOffset) && integer(p.length) && p.length > 0 && p.sourceOffset + p.length <= source.length, 'Invalid firmware slice.');
-    requireThat(permittedRange(device, p.address, roundUp(p.length)), 'Firmware would touch a protected or unsupported region.');
+    requireThat(scenicRange || permittedRange(device, p.address, roundUp(p.length)), 'Firmware would touch a protected or unsupported region.');
     const data = source.slice(p.sourceOffset, p.sourceOffset + p.length);
     if (p.kind === 'application' || p.kind === 'bootloader') {
       requireThat(data.length > 256 && data[0] === 0xe9 && data[12] === 9 && data[13] === 0, 'Firmware is not an ESP32-S3 application/bootloader.');
@@ -97,7 +100,7 @@ export function validateParts(release, device, files) {
   const sorted = [...parts].sort((a,b) => a.address - b.address);
   requireThat(sorted.every((p,i) => !i || p.address >= sorted[i-1].address + roundUp(sorted[i-1].length)), 'Firmware slices overlap.');
   if (isBlackjackStick(release)) requireThat(samePartitions(parsePartitions(parts.find(p => p.kind === 'partitions').data,device.flashBytes),release.partitions), 'Blackjack binary partition table differs.');
-  if (device.id === 'waveshare175c') requireThat(parts.length === 1 && parts[0].address === 0x200000 && parts[0].kind === 'application', 'Waveshare requires an application-only image.');
+  if (device.id === 'waveshare175c') requireThat(parts.length === 1 && parts[0].address === (scenicRange?.address ?? 0x200000) && parts[0].kind === 'application', 'Waveshare requires an application-only image.');
   return parts;
 }
 export async function fetchFiles(release, fetcher = fetch, notify = () => {}, listener = () => {}) {
@@ -158,7 +161,7 @@ export async function inspectInstallation(loader, release, device, catalog, list
   const table=await readVerified(loader,0x8000,sector,()=>{},listener);
   const rows=parsePartitions(table,device.flashBytes);const matchingMap=samePartitions(rows,release.partitions);
   const tableSha256=await sha256(table);
-  const voxelFlightLayout=!!seederVoxelFlightRange(release,device)&&tableSha256===voxelFlightTableSha256;
+  const voxelFlightLayout=!!voxelFlightAppRange(release,device)&&tableSha256===voxelFlightTableSha256;
   let currentProject=null;
   if(matchingMap){
     const app=release.parts.find(p=>p.kind==='application');
@@ -169,6 +172,7 @@ export async function inspectInstallation(loader, release, device, catalog, list
         const projectName=decoder.decode(name);
         if(['stardust-sticks3','stardust-waveshare175c'].includes(projectName))currentProject='blackjack';
         else if(projectName==='stopwatch-firmware')currentProject='stopwatch';
+        else if(projectName==='scenic-flight-waveshare')currentProject='scenic-flight';
         else if(projectName==='arduino-lib-builder'){
           const candidates=new Set(catalog.releases.filter(r=>r.device===device.id&&['seeder','phoenix'].includes(r.project)&&samePartitions(rows,r.partitions)).map(r=>r.project));
           if(candidates.size===1)currentProject=[...candidates][0];
@@ -189,9 +193,10 @@ export async function prepare(loader, release, device, identity, files, progress
   const rows = parsePartitions(table, device.flashBytes);
   const matchingMap = samePartitions(rows, release.partitions);
   const tableSha256 = await sha256(table);
-  const alternateRange = seederVoxelFlightRange(release,device);
+  const alternateRange = voxelFlightAppRange(release,device);
   const voxelFlightLayout = !!alternateRange && tableSha256 === voxelFlightTableSha256;
   observe(listener,{type:'log',source:'CHECK',message:`Partition table checked · ${voxelFlightLayout?'Voxel Flight layout, app only':matchingMap?'matching layout':'different layout'}`});
+  if (release.project === 'scenic-flight') requireThat(voxelFlightLayout && matchingMap, 'Scenic Flight requires the verified Voxel Flight partition table.');
   if (device.id === 'waveshare175c') requireThat(matchingMap || voxelFlightLayout, 'Factory partition map differs. This release does not support the connected Waveshare partition layout.');
   if (voxelFlightLayout) parts = [{...parts[0],address:alternateRange.address}];
   if (isBlackjack(release)) {
@@ -254,7 +259,7 @@ export async function decodeBackup(bytes, catalog) {
   // A saved recovery file must remain usable after its release leaves the UI.
   const release = [...catalog.releases, ...(catalog.recoveryReleases || [])]
     .find(r => r.id === manifest.release && r.device === manifest.device);
-  const alternate = release && device ? seederVoxelFlightRange(release,device) : null;
+  const alternate = release && device ? voxelFlightAppRange(release,device) : null;
   const usesAlternate = !!alternate && manifest.tableSha256 === voxelFlightTableSha256;
   const authority = usesAlternate ? [alternate] : release && device ? recoveryAuthority(release,device) : [];
   requireThat(manifest.format === 1 && device && release && Array.isArray(manifest.ranges) && manifest.ranges.length > 0 && manifest.ranges.length <= authority.length, 'Unsupported recovery file.');

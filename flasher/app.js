@@ -38,7 +38,7 @@ function backupOffer(){
   $('backup-offer').hidden=!show;if(!show)return;
   if(inspection.voxelFlightLayout){
     $('backup-offer-title').textContent=plan?.backupCaptured?'Recovery backup ready':'Voxel Flight layout detected';
-    $('backup-offer-message').textContent='Seeder will replace only the current app. The partition table and storage stay in place.';
+    $('backup-offer-message').textContent='The installer replaces only the current app. The partition table and storage stay in place.';
     $('offer-backup').textContent=plan?.backupCaptured?'Save backup':'Create backup';
     $('backup-offer-hint').textContent='Save a recovery file before flashing.';
     return;
@@ -84,7 +84,7 @@ function openInstaller(r,restore) {
     const list=el('ul');for(const f of r.files){const item=el('li');item.append(link(f.id,f.url),el('p',`${f.bytes.toLocaleString()} bytes`),el('code',f.sha256));list.append(item);}details.append(list);
   }
   info.append(details);
-  $('recovery-guide').textContent=r.voxelFlightLayout?'Hold BOOT while powering or resetting, then release BOOT. Seeder checks the existing partition layout before writing.':device.recovery;
+  $('recovery-guide').textContent=r.voxelFlightLayout?'Hold BOOT while powering or resetting, then release BOOT. The installer checks the existing partition layout before writing.':device.recovery;
   $('model-label').textContent=`My connected device is exactly the ${device.name}${device.id==='waveshare175c'?' (C model)':' / K150'}.`;
   $('model-confirm').checked=false;$('installer-advanced').open=false;$('backup-offer').hidden=true;
   $('replace-warning').textContent=restore?'Restoring replaces the current firmware with your saved sectors. Use only your own recovery file.':r.project === 'blackjack'?'Installing restarts the device. Compatible Blackjack updates preserve progress. Replacing another project can overwrite its storage.':'Installing replaces the current project and restarts the device. Save any current seed first.';
@@ -143,7 +143,7 @@ $('save').onclick=async()=>{
     else{
       const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));const a=link('',url);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
       if(inspection?.voxelFlightLayout) saved=window.confirm('Has the recovery file downloaded? Confirm only after saving it to your computer.');
-      status(saved?'Backup saved':'Backup download requested',saved?'You can now flash Seeder.':'Keep the recovery file if you want to restore this firmware later.');
+      status(saved?'Backup saved':'Backup download requested',saved?'You can now flash the selected firmware.':'Keep the recovery file if you want to restore this firmware later.');
     }
     activity.finish(0,'Optional backup ready');backupOffer();
   }catch(e){activity.fail();status(e.name==='AbortError'?'Backup save cancelled':'Backup could not be saved',e.name==='AbortError'?'You can save it again or continue with Flash firmware.':errorMessage(e),'warning');}
