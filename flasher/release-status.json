@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-25T03:50:37+00:00",
+  "checkedAt": "2026-11-25T04:49:38+00:00",
   "projects": [
     {
       "project": "seeder",
@@ -22,14 +22,14 @@
     {
       "project": "phoenix",
       "repository": "xberenguer/phoenix-link-confucius-say",
-      "tag": "v0.2.175",
-      "releaseUrl": "https://github.com/xberenguer/phoenix-link-confucius-say/releases/tag/v0.2.175",
+      "tag": "v0.2.176",
+      "releaseUrl": "https://github.com/xberenguer/phoenix-link-confucius-say/releases/tag/v0.2.176",
       "state": "current",
       "message": "Latest published stable release verified.",
       "devices": [
         {
           "device": "sticks3",
-          "offeredVersion": "0.2.175"
+          "offeredVersion": "0.2.176"
         }
       ]
     },
