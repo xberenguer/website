@@ -747,28 +747,28 @@
       }
     },
     {
-      "id": "scenic-flight-waveshare175c-0.1.84",
+      "id": "scenic-flight-waveshare175c-0.1.94",
       "project": "scenic-flight",
       "device": "waveshare175c",
-      "version": "0.1.84",
+      "version": "0.1.94",
       "status": "Published release",
       "description": "Hands-off flight through seeded landscapes.",
       "qualification": "App-only firmware for the measured Voxel Flight partition layout.",
-      "source": "https://github.com/xberenguer/scenic-flight/tree/e0a334ea870c78d9539b0001bf296a0e0e8c5add",
-      "manual": "https://github.com/xberenguer/scenic-flight/blob/v0.1.84/README.md",
+      "source": "https://github.com/xberenguer/scenic-flight/tree/60fc0ce89eafcc1323c48f32cd814b2bd90ef503",
+      "manual": "https://github.com/xberenguer/scenic-flight/blob/v0.1.94/README.md",
       "files": [
         {
-          "id": "scenic-flight-waveshare175c-0.1.84.bin",
-          "url": "firmware/scenic-flight-waveshare175c-0.1.84.bin",
-          "bytes": 2908336,
-          "sha256": "fd1433a6a92e02e143730fda0026eee878f2c7fede7aeb3a77f9f0925410f999"
+          "id": "scenic-flight-waveshare175c-0.1.94.bin",
+          "url": "firmware/scenic-flight-waveshare175c-0.1.94.bin",
+          "bytes": 2992656,
+          "sha256": "cb0bf408e4ebcc4f1a0dc8f380cff97141ea0ea5adab143fc53f47119362de15"
         }
       ],
       "parts": [
         {
-          "file": "scenic-flight-waveshare175c-0.1.84.bin",
+          "file": "scenic-flight-waveshare175c-0.1.94.bin",
           "sourceOffset": 0,
-          "length": 2908336,
+          "length": 2992656,
           "address": 65536,
           "kind": "application"
         }
@@ -810,19 +810,19 @@
       "voxelFlightLayout": true,
       "upstream": {
         "repository": "xberenguer/scenic-flight",
-        "tag": "v0.1.84",
-        "commit": "e0a334ea870c78d9539b0001bf296a0e0e8c5add",
-        "releaseId": 459675340,
+        "tag": "v0.1.94",
+        "commit": "60fc0ce89eafcc1323c48f32cd814b2bd90ef503",
+        "releaseId": 459754876,
         "assets": {
           "scenic-flight-waveshare175c-app.bin": {
-            "id": 796805949,
-            "bytes": 2908336,
-            "sha256": "fd1433a6a92e02e143730fda0026eee878f2c7fede7aeb3a77f9f0925410f999"
+            "id": 797108540,
+            "bytes": 2992656,
+            "sha256": "cb0bf408e4ebcc4f1a0dc8f380cff97141ea0ea5adab143fc53f47119362de15"
           },
           "SHA256SUMS": {
-            "id": 796806046,
+            "id": 797108664,
             "bytes": 102,
-            "sha256": "04e28a0d4d8e8ada0afb7e4e6f490f46afe93469fe52f0a1294d80dca10ccadf"
+            "sha256": "f6c55c8e9e8cca83a11f183607a84b20cb38dc76a08a59f832867dd7f6cd319f"
           }
         }
       }
@@ -4706,6 +4706,87 @@
             "id": 796224053,
             "bytes": 102,
             "sha256": "4c5983a2b3c3a0e9f916669776d8d2868e3c921fdb63c19c95f91a8289b8fd78"
+          }
+        }
+      }
+    },
+    {
+      "id": "scenic-flight-waveshare175c-0.1.84",
+      "project": "scenic-flight",
+      "device": "waveshare175c",
+      "version": "0.1.84",
+      "status": "Published release",
+      "description": "Hands-off flight through seeded landscapes.",
+      "qualification": "App-only firmware for the measured Voxel Flight partition layout.",
+      "source": "https://github.com/xberenguer/scenic-flight/tree/e0a334ea870c78d9539b0001bf296a0e0e8c5add",
+      "manual": "https://github.com/xberenguer/scenic-flight/blob/v0.1.84/README.md",
+      "files": [
+        {
+          "id": "scenic-flight-waveshare175c-0.1.84.bin",
+          "url": "firmware/scenic-flight-waveshare175c-0.1.84.bin",
+          "bytes": 2908336,
+          "sha256": "fd1433a6a92e02e143730fda0026eee878f2c7fede7aeb3a77f9f0925410f999"
+        }
+      ],
+      "parts": [
+        {
+          "file": "scenic-flight-waveshare175c-0.1.84.bin",
+          "sourceOffset": 0,
+          "length": 2908336,
+          "address": 65536,
+          "kind": "application"
+        }
+      ],
+      "partitions": [
+        {
+          "type": 1,
+          "subtype": 2,
+          "offset": 36864,
+          "size": 24576,
+          "label": "nvs",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 1,
+          "offset": 61440,
+          "size": 4096,
+          "label": "phy_init",
+          "flags": 0
+        },
+        {
+          "type": 0,
+          "subtype": 0,
+          "offset": 65536,
+          "size": 5242880,
+          "label": "factory",
+          "flags": 0
+        },
+        {
+          "type": 1,
+          "subtype": 129,
+          "offset": 5308416,
+          "size": 28246016,
+          "label": "storage",
+          "flags": 0
+        }
+      ],
+      "voxelFlightLayout": true,
+      "upstream": {
+        "repository": "xberenguer/scenic-flight",
+        "tag": "v0.1.84",
+        "commit": "e0a334ea870c78d9539b0001bf296a0e0e8c5add",
+        "releaseId": 459675340,
+        "assets": {
+          "scenic-flight-waveshare175c-app.bin": {
+            "id": 796805949,
+            "bytes": 2908336,
+            "sha256": "fd1433a6a92e02e143730fda0026eee878f2c7fede7aeb3a77f9f0925410f999"
+          },
+          "SHA256SUMS": {
+            "id": 796806046,
+            "bytes": 102,
+            "sha256": "04e28a0d4d8e8ada0afb7e4e6f490f46afe93469fe52f0a1294d80dca10ccadf"
           }
         }
       }
