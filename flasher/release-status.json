@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-26T12:29:21+00:00",
+  "checkedAt": "2026-11-26T14:16:15+00:00",
   "projects": [
     {
       "project": "seeder",
@@ -68,14 +68,14 @@
     {
       "project": "scenic-flight",
       "repository": "xberenguer/scenic-flight",
-      "tag": "v0.1.64",
-      "releaseUrl": "https://github.com/xberenguer/scenic-flight/releases/tag/v0.1.64",
+      "tag": "v0.1.74",
+      "releaseUrl": "https://github.com/xberenguer/scenic-flight/releases/tag/v0.1.74",
       "state": "current",
       "message": "Latest published stable release verified.",
       "devices": [
         {
           "device": "waveshare175c",
-          "offeredVersion": "0.1.64"
+          "offeredVersion": "0.1.74"
         }
       ]
     }
