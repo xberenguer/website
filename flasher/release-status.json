@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-27T02:04:36+00:00",
+  "checkedAt": "2026-11-27T03:42:37+00:00",
   "projects": [
     {
       "project": "seeder",
@@ -50,18 +50,18 @@
     {
       "project": "blackjack",
       "repository": "xberenguer/blackjack-trainer",
-      "tag": "v0.12.3",
-      "releaseUrl": "https://github.com/xberenguer/blackjack-trainer/releases/tag/v0.12.3",
+      "tag": "v0.12.4",
+      "releaseUrl": "https://github.com/xberenguer/blackjack-trainer/releases/tag/v0.12.4",
       "state": "current",
       "message": "Latest published stable release verified.",
       "devices": [
         {
           "device": "sticks3",
-          "offeredVersion": "0.12.3"
+          "offeredVersion": "0.12.4"
         },
         {
           "device": "waveshare175c",
-          "offeredVersion": "0.12.3"
+          "offeredVersion": "0.12.4"
         }
       ]
     },
